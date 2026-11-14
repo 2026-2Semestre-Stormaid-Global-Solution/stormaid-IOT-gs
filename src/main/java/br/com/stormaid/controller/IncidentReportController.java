@@ -5,6 +5,7 @@ import br.com.stormaid.dto.response.IncidentResponse;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.service.IncidentReportService;
 import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -22,27 +23,34 @@ public class IncidentReportController {
         this.incidentReportService = incidentReportService;
     }
 
-
     @PostMapping
     public ResponseEntity<IncidentResponse> create(
             @AuthenticationPrincipal User user,
-            @RequestHeader(
-                    value = "Idempotency-Key",
-                    required = false
-            ) String idempotencyKey,
+            @RequestHeader(value = "Idempotency-Key", required = false)
+            String idempotencyKey,
             @RequestBody @Valid IncidentCreateRequest request
     ) {
-        IncidentResponse created = incidentReportService.createIncident(
-                user,
-                request,
-                idempotencyKey
-        );
+        try {
+            IncidentResponse created = incidentReportService.createIncident(
+                    user,
+                    request,
+                    idempotencyKey
+            );
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+
+        } catch (DataIntegrityViolationException exception) {
+            IncidentResponse existing =
+                    incidentReportService.recoverIdempotencyConflict(
+                            user,
+                            request,
+                            idempotencyKey,
+                            exception
+                    );
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(existing);
+        }
     }
-
 
     @GetMapping
     public ResponseEntity<Page<IncidentResponse>> list(
@@ -50,6 +58,7 @@ public class IncidentReportController {
             Pageable pageable
     ) {
         Page<IncidentResponse> incidents = incidentReportService.listByRequester(user, pageable);
+
         return ResponseEntity.ok(incidents);
     }
 
@@ -59,6 +68,7 @@ public class IncidentReportController {
             @PathVariable Long id
     ) {
         IncidentResponse incident = incidentReportService.findByIdAndRequester(id, user);
+
         return ResponseEntity.ok(incident);
     }
 }
