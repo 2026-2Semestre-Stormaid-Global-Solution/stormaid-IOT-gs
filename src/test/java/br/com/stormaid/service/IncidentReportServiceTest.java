@@ -1,8 +1,8 @@
-
 package br.com.stormaid.service;
 
 import br.com.stormaid.ai.RagAnalysisService;
 import br.com.stormaid.dto.request.IncidentCreateRequest;
+import br.com.stormaid.entity.Dependent;
 import br.com.stormaid.entity.IncidentReport;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.enums.ChannelType;
@@ -17,10 +17,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -170,6 +169,65 @@ class IncidentReportServiceTest {
                         .getIdempotencyKey()
                         .startsWith("auto-")
         );
+    }
+
+    @Test
+    void shouldAllowIncidentForOwnDependent() {
+        Dependent dependent = new Dependent();
+        dependent.setId(10L);
+        dependent.setGuardian(requester);
+
+        when(request.dependentId()).thenReturn(10L);
+
+        when(dependentRepository.findById(10L))
+                .thenReturn(Optional.of(dependent));
+
+        when(incidentReportRepository.save(any(IncidentReport.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        incidentReportService.createIncident(
+                requester,
+                request,
+                null
+        );
+
+        verify(incidentReportRepository).save(
+                argThat(incident -> incident.getDependent() == dependent)
+        );
+
+        verify(eventPublisher).publishIncidentCreated(
+                any(IncidentReport.class)
+        );
+    }
+
+    @Test
+    void shouldRejectIncidentForAnotherUsersDependent() {
+        User anotherGuardian = new User();
+        anotherGuardian.setId(2L);
+
+        Dependent dependent = new Dependent();
+        dependent.setId(10L);
+        dependent.setGuardian(anotherGuardian);
+
+        when(request.dependentId()).thenReturn(10L);
+
+        when(dependentRepository.findById(10L))
+                .thenReturn(Optional.of(dependent));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> incidentReportService.createIncident(
+                        requester,
+                        request,
+                        null
+                )
+        );
+
+        verify(incidentReportRepository, never())
+                .save(any(IncidentReport.class));
+
+        verifyNoInteractions(eventPublisher);
+        verifyNoInteractions(ragAnalysisService);
     }
 
     private IncidentReport createPreviousIncident(String description) {
