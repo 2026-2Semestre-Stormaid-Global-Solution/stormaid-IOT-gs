@@ -25,6 +25,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
+import java.sql.SQLException;
+import java.util.Locale;
 
 @Service
 public class IncidentReportService {
@@ -154,6 +158,76 @@ public class IncidentReportService {
 
         return mapToResponse(saved);
     }
+
+
+    @Transactional(readOnly = true)
+    public IncidentResponse recoverIdempotencyConflict(
+            User requester,
+            IncidentCreateRequest request,
+            String idempotencyKey,
+            DataIntegrityViolationException exception
+    ) {
+        if (idempotencyKey == null
+                || !isIdempotencyUniqueConstraint(exception)) {
+            throw exception;
+        }
+
+        String effectiveKey = idempotencyKey.trim();
+
+        if (effectiveKey.isBlank()
+                || effectiveKey.length() > 100
+                || effectiveKey.startsWith("auto-")) {
+            throw exception;
+        }
+
+        IncidentReport previous = incidentReportRepository
+                .findByRequesterIdAndIdempotencyKey(
+                        requester.getId(),
+                        effectiveKey
+                )
+                .orElseThrow(() -> exception);
+
+        if (!isSameRequest(previous, request)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Idempotency-Key já utilizada com dados diferentes"
+            );
+        }
+
+        return mapToResponse(previous);
+    }
+
+    private boolean isIdempotencyUniqueConstraint(Throwable exception) {
+        Throwable cause = exception;
+
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException violation) {
+                String constraintName = violation.getConstraintName();
+
+                if (constraintName != null
+                        && constraintName.toUpperCase(Locale.ROOT)
+                        .contains("UK_SA_INC_IDEMP")) {
+                    return true;
+                }
+            }
+
+            if (cause instanceof SQLException sqlException) {
+                String message = sqlException.getMessage();
+
+                if (sqlException.getErrorCode() == 1
+                        && message != null
+                        && message.toUpperCase(Locale.ROOT)
+                        .contains("UK_SA_INC_IDEMP")) {
+                    return true;
+                }
+            }
+
+            cause = cause.getCause();
+        }
+
+        return false;
+    }
+
 
     private boolean isSameRequest(
             IncidentReport previous,
