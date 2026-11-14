@@ -17,6 +17,7 @@ import br.com.stormaid.repository.IncidentReportRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -110,6 +111,16 @@ public class IncidentReportService {
                     .orElseThrow(() -> new IllegalArgumentException(
                             "Dependente não encontrado"
                     ));
+
+            if (dependent.getGuardian() == null
+                    || !Objects.equals(
+                    dependent.getGuardian().getId(),
+                    requester.getId()
+            )) {
+                throw new AccessDeniedException(
+                        "Você não tem permissão para utilizar este dependente"
+                );
+            }
 
             incident.setDependent(dependent);
         }
