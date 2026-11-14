@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
 
 import java.time.Instant;
 
@@ -45,6 +46,7 @@ public class IncidentReportService {
         }
 
         IncidentReport incident = new IncidentReport();
+        incident.setIdempotencyKey("auto-" + UUID.randomUUID());
         incident.setRequester(requester);
         incident.setRecipientType(request.recipientType());
 
