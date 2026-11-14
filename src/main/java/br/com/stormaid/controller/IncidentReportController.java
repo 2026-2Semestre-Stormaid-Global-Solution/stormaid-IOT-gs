@@ -22,14 +22,27 @@ public class IncidentReportController {
         this.incidentReportService = incidentReportService;
     }
 
+
     @PostMapping
     public ResponseEntity<IncidentResponse> create(
             @AuthenticationPrincipal User user,
+            @RequestHeader(
+                    value = "Idempotency-Key",
+                    required = false
+            ) String idempotencyKey,
             @RequestBody @Valid IncidentCreateRequest request
     ) {
-        IncidentResponse created = incidentReportService.createIncident(user, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        IncidentResponse created = incidentReportService.createIncident(
+                user,
+                request,
+                idempotencyKey
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(created);
     }
+
 
     @GetMapping
     public ResponseEntity<Page<IncidentResponse>> list(
