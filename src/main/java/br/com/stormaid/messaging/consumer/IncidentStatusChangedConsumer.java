@@ -30,7 +30,10 @@ public class IncidentStatusChangedConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @RabbitListener(queues = "incident.status.changed.queue")
+    @RabbitListener(
+            queues = "incident.status.changed.queue",
+            containerFactory = "incidentStatusListenerContainerFactory"
+    )
     @Transactional
     public void consumeStatusChanged(String messageJson) {
 
