@@ -137,7 +137,7 @@ public class IncidentReportService {
         incident.setLocation(request.location());
 
         incident.setPublicStatus(IncidentPublicStatus.RECEIVED);
-        incident.setStatusVersion(0L);
+        incident.setStatusVersion(1L);
         incident.setCreatedAt(Instant.now());
         incident.setUpdatedAt(Instant.now());
 
