@@ -20,6 +20,9 @@ public class RabbitMQConfig {
     public static final String INCIDENT_STATUS_CHANGED_QUEUE = "incident.status.changed.queue";
     public static final String STATUS_EXCHANGE = "stormaid.events";
     public static final String STATUS_CHANGED_ROUTING_KEY = "incident.status.changed.v1";
+    public static final String STATUS_DEAD_LETTER_EXCHANGE = "stormaid.status.dlx";
+    public static final String STATUS_DEAD_LETTER_QUEUE = "stormaid.incident.status.changed.dlq";
+    public static final String STATUS_DEAD_LETTER_ROUTING_KEY = "incident.status.dead";
 
     @Bean
     public Queue incidentCreatedQueue() {
@@ -68,4 +71,34 @@ public class RabbitMQConfig {
                 rabbitObjectMapper
         );
     }
+
+
+    @Bean
+    public DirectExchange incidentStatusDeadLetterExchange() {
+        return new DirectExchange(
+                STATUS_DEAD_LETTER_EXCHANGE,
+                true,
+                false
+        );
+    }
+
+    @Bean
+    public Queue incidentStatusDeadLetterQueue() {
+        return new Queue(
+                STATUS_DEAD_LETTER_QUEUE,
+                true
+        );
+    }
+
+    @Bean
+    public Binding incidentStatusDeadLetterBinding(
+            @Qualifier("incidentStatusDeadLetterQueue") Queue queue,
+            @Qualifier("incidentStatusDeadLetterExchange") DirectExchange exchange
+    ) {
+        return BindingBuilder
+                .bind(queue)
+                .to(exchange)
+                .with(STATUS_DEAD_LETTER_ROUTING_KEY);
+    }
+
 }
