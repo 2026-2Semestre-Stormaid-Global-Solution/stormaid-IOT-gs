@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.amqp.core.Message;
+import java.nio.charset.StandardCharsets;
 
 import java.time.Instant;
 
@@ -35,7 +37,12 @@ public class IncidentStatusChangedConsumer {
             containerFactory = "incidentStatusListenerContainerFactory"
     )
     @Transactional
-    public void consumeStatusChanged(String messageJson) {
+    public void consumeStatusChanged(Message message) {
+
+        String messageJson = new String(
+                message.getBody(),
+                StandardCharsets.UTF_8
+        );
 
         StatusChangedEvent event;
 
@@ -48,7 +55,6 @@ public class IncidentStatusChangedConsumer {
             log.error("Erro ao interpretar evento de atualização de status.", e);
             throw new IllegalArgumentException("Evento JSON inválido.", e);
         }
-
         if (event.getIncidentId() == null ||
                 event.getIncidentId() <= 0 ||
                 event.getStatus() == null ||
