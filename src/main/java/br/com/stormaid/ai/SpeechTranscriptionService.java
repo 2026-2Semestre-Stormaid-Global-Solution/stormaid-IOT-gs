@@ -25,7 +25,7 @@ public class SpeechTranscriptionService {
         if (incident == null) return;
 
         try {
-            String transcribedText = "Transcrição automática do áudio [" + audioStorageKey + "]: Solicitação de emergência registrada via canal de voz.";
+            String transcribedText = "[TRANSCRIÇÃO SIMULADA] Áudio ref: " + audioStorageKey + " - Relato de emergência capturado via canal de voz.";
             incident.setAudioTranscription(transcribedText);
             incident.setTranscriptionStatus(TranscriptionStatus.COMPLETED);
         } catch (Exception e) {
