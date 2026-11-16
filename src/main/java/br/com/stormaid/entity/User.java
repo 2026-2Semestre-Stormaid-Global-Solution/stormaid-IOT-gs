@@ -1,5 +1,6 @@
 package br.com.stormaid.entity;
 import br.com.stormaid.enums.UserStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -32,6 +33,7 @@ public class User implements UserDetails {
     @Column(name = "EMAIL", nullable = false, unique = true, length = 150)
     private String email;
 
+    @JsonIgnore
     @Column(name = "PASSWORD_HASH", nullable = false, length = 255)
     private String password;
 
