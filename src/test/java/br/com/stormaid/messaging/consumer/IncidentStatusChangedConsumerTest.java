@@ -128,6 +128,28 @@ class IncidentStatusChangedConsumerTest {
         verifyNoInteractions(incidentRepository);
     }
 
+    @Test
+    void shouldApplyCancelledStatusWhenVersionIsNewer() {
+        IncidentReport incident = createIncident(4L);
+
+        when(incidentRepository.findById(307L))
+                .thenReturn(Optional.of(incident));
+
+        consumer.consumeStatusChanged(
+                message(validEvent("CANCELLED", 5L))
+        );
+
+        assertEquals(
+                IncidentPublicStatus.CANCELLED,
+                incident.getPublicStatus()
+        );
+
+        assertEquals(5L, incident.getStatusVersion());
+
+        verify(incidentRepository, times(1))
+                .save(incident);
+    }
+
     private IncidentReport createIncident(Long statusVersion) {
         IncidentReport incident = new IncidentReport();
         incident.setId(307L);
