@@ -1,6 +1,6 @@
 # 🚨 StormAid API
 
-O **StormAid** é uma plataforma inteligente de gestão de emergências, zeladoria comunitária e resposta a catástrofes. A API integra cidadãos, dependentes e socorristas/reguladores institucionais através de uma arquitetura robusta em Spring Boot com segurança JWT, persistência em Oracle Database e mensageria assíncrona com RabbitMQ.
+O **StormAid** é uma plataforma inteligente de gestão de emergências, zeladoria comunitária e resposta a catástrofes. A API integra cidadãos, dependentes e socorristas/reguladores institucionais através de uma arquitetura robusta em Spring Boot com segurança JWT, persistência em Oracle Database, mensageria assíncrona com RabbitMQ e inteligência artificial com Spring AI (RAG).
 
 ---
 
@@ -19,23 +19,87 @@ http://localhost:8080
 ```
 ---
 
-# 🔗 Link Youtube
+# 🔗 Link YouTube (Pitch)
 
 ```bash
 LINK YOUTUBE
 ```
 ---
 
-## ⚙️ Tecnologias e Configurações
+## 👥 Integrantes do Grupo
 
+<table>
+  <tr>
+    <td width="130">
+      <img src="https://github.com/moisesBarsoti.png" width="120" style="border-radius: 50%;"/>
+    </td>
+    <td>
+      <b>Moisés Barsoti Andrade de Oliveira</b><br/>
+      <b>RM:</b> 565049 &nbsp;&nbsp;|&nbsp;&nbsp;<b>Turma:</b> 2TDSPO - FIAP <br/>
+    </td>
+  </tr>
+
+  <tr>
+    <td width="130">
+      <img src="https://github.com/sSofia-s.png" width="120" style="border-radius: 50%;"/>
+    </td>
+    <td>
+      <b>Sofia Siqueira Fontes</b><br/>
+      <b>RM:</b> 563829 &nbsp;&nbsp;|&nbsp;&nbsp;<b>Turma:</b> 2TDSPG - FIAP <br/>
+    </td>
+  </tr>
+
+  <tr>
+    <td width="130">
+      <img src="https://github.com/manuelalacerda.png" width="120" style="border-radius: 50%;"/>
+    </td>
+    <td>
+      <b>Manuela de Lacerda Soares</b><br/>
+      <b>RM:</b> 564887 &nbsp;&nbsp;|&nbsp;&nbsp;<b>Turma:</b> 2TDSPG - FIAP <br/>
+    </td>
+  </tr>
+</table>
+
+---
+
+## ⚙️ Tecnologias e Configurações
 ### Tecnologias Utilizadas
 - **Java 17 / 21** & **Spring Boot 3.2.x**
+- **Spring AI (Integração com LLM e RAG para análise de incidentes)**
 - **Spring Security** com **JWT (JSON Web Token)**
 - **Oracle Database** (Ambiente Principal) & **H2 Database** (Ambiente de Testes)
 - **Flyway Migration** (Gerenciamento de Schemas SQL)
-- **RabbitMQ** (Mensageria para criação de incidentes)
+- **RabbitMQ** (Mensageria para criação e processamento assíncrono de incidentes)
 - **JUnit 5 / MockMvc** (Testes de Integração)
 
+---
+
+## 🤖 Declaração de Uso de Inteligência Artificial (Spring AI & RAG)
+
+- O StormAid utiliza componentes de Spring AI para auxiliar na triagem automatizada e análise contextual de ocorrências:
+- RagAnalysisService: Realiza a recuperação de contexto e análise inteligente dos incidentes registados.
+- Transcrição de Áudio (Simulada): O sistema suporta rotinas assíncronas para processamento de áudios de emergência (com transcrição simulada baseada em chaves de armazenamento para fins de demonstração académica).
+- Mensageria com IA: Os eventos de criação de incidentes são encaminhados via RabbitMQ (incident.ai.queue) para processamento assíncrono por IA, garantindo alta disponibilidade e desacoplamento síncrono.
+
+---
+
+## 📊 Arquitetura e Modelo de Dados (Diagrama ER)
+
+Abaixo está representado o diagrama de entidades e relacionamentos (ER) da base de dados do StormAid, mapeando utilizadores, perfis, dependentes, ocorrências e análises de IA:
+
+```mermaid
+erDiagram
+USER ||--o{ USER_ROLE : has
+ROLE ||--o{ USER_ROLE : grants
+USER ||--o| CITIZEN_PROFILE : has_citizen_profile
+USER ||--o| RESPONDER_PROFILE : has_responder_profile
+USER ||--o{ DEPENDENT : manages
+USER ||--o{ INCIDENT_REPORT : submits
+DEPENDENT o|--o{ INCIDENT_REPORT : may_be_subject
+INCIDENT_REPORT ||--o{ INCIDENT_AI_ANALYSIS : receives
+USER ||--o{ COMMUNITY_RISK_REPORT : submits
+USER o|--o{ RESPONDER_PROFILE : authorizes
+```
 ---
 
 ## 🔐 Roles e Perfis de Acesso
@@ -54,7 +118,6 @@ O sistema utiliza três perfis (roles) de autorização bem definidos:
 As migrações SQL são executadas automaticamente na inicialização da aplicação em ambiente de produção/desenvolvimento Oracle:
 - `V1__create_stormaid_schema.sql`: Criação das tabelas base (`TB_STORMAID_USER`, `TB_STORMAID_USER_ROLE`, etc.).
 - `V2__seed_initial_data.sql`: Carga inicial de permissões e perfis padronizados.
-- `V3__...sql`: Ajustes finos de integridade e restrições.
 
 ### 2. Variáveis de Ambiente
 Configure as seguintes variáveis no seu ambiente ou no `application.properties`:
@@ -75,22 +138,23 @@ spring.rabbitmq.host=${RABBITMQ_HOST:localhost}
 spring.rabbitmq.port=${RABBITMQ_PORT:5672}
 spring.rabbitmq.username=${RABBITMQ_USER:guest}
 spring.rabbitmq.password=${RABBITMQ_PASS:guest}
-```
 
+# Configuração Spring AI / OpenAI (se aplicável)
+spring.ai.openai.api-key=${OPENAI_API_KEY:sua_chave_ai}
+```
 ---
 
 ## 📬 Mensageria Assíncrona (RabbitMQ)
 
-A API do StormAid publica eventos assíncronos ao registrar novas ocorrências de incidentes:
-- **Fila/Routing Key**: `incident.created.v1`
-- **Exchange**: `stormaid.incidents`
-- **Payload**: Objeto JSON com dados brutos da ocorrência para consumo em tempo real por centrais de triagem dos socorristas.
-
+A API do StormAid publica eventos assíncronos críticos:
+- Fila de Incidentes: incident.created.v1
+- Fila de IA (RAG): incident.ai.queue
+- Exchange: stormaid.incidents
 ---
 
 ## 🧪 Execução de Testes Automatizados
 
-Os testes de integração utilizam uma configuração isolada em memória com banco H2 (`src/test/resources/application.properties`), garantindo a execução rápida e sem dependência do ambiente Oracle local.
+Os testes de integração utilizam uma configuração isolada em memória com banco H2 (src/test/resources/application.properties).
 
 ### Como executar os testes via Maven:
 
@@ -187,36 +251,34 @@ Os testes de integração utilizam uma configuração isolada em memória com ba
 
 ---
 
-## 👥 Integrantes do Grupo
+---
 
-<table>
-  <tr>
-    <td width="130">
-      <img src="https://github.com/moisesBarsoti.png" width="120" style="border-radius: 50%;"/>
-    </td>
-    <td>
-      <b>Moisés Barsoti Andrade de Oliveira</b><br/>
-      <b>RM:</b> 565049 &nbsp;&nbsp;|&nbsp;&nbsp;<b>Turma:</b> 2TDSPO - FIAP <br/>
-    </td>
-  </tr>
+## 📸 Evidências e Testes da Aplicação (JAVA-14)
 
-  <tr>
-    <td width="130">
-      <img src="https://github.com/sSofia-s.png" width="120" style="border-radius: 50%;"/>
-    </td>
-    <td>
-      <b>Sofia Siqueira Fontes</b><br/>
-      <b>RM:</b> 563829 &nbsp;&nbsp;|&nbsp;&nbsp;<b>Turma:</b> 2TDSPG - FIAP <br/>
-    </td>
-  </tr>
+Esta secção documenta as evidências de execução, testes funcionais, validação de regras de negócio e a robustez de segurança implementada na API do StormAid.
 
-  <tr>
-    <td width="130">
-      <img src="https://github.com/manuelalacerda.png" width="120" style="border-radius: 50%;"/>
-    </td>
-    <td>
-      <b>Manuela de Lacerda Soares</b><br/>
-      <b>RM:</b> 564887 &nbsp;&nbsp;|&nbsp;&nbsp;<b>Turma:</b> 2TDSPG - FIAP <br/>
-    </td>
-  </tr>
-</table>
+### 1. Documentação Interativa (Swagger UI)
+Abaixo está a interface geral do Swagger UI a expor todos os controladores da API (autenticação, incidentes, dependentes, perfis e relatórios comunitários):
+<p align="center">
+  <img src="docs/images/swagger-ui.png" width="300" alt="Swagger UI - Visão Geral">
+</p>
+
+### 2. Testes de Regras de Negócio e Validação de Exceções (`400 Bad Request`)
+O endpoint de registo de incidentes valida rigorosamente os dados enviados no payload (como a existência de dependentes e parâmetros obrigatórios), retornando um erro limpo de Bad Request quando há inconsistências de negócio, antes de prosseguir com o fluxo de mensageria e IA:
+<p align="center">
+  <img src="docs/images/bad-request-test.png" width="300" alt="Teste com Erro de Negócio">
+</p>
+
+### 3. Testes de Sucesso e Persistência do Incidente (`200 OK`)
+Após a validação correta dos parâmetros e do envio com o token de autenticação, o endpoint `POST /api/v1/incidents` processa com sucesso o pedido, persistindo o incidente na base de dados e acionando o ecossistema assíncrono:
+<p align="center">
+  <img src="docs/images/success-incident-test.png" width="300" alt="Teste com Sucesso">
+</p>
+
+### 4. Suíte de Testes Automatizados
+* **Ferramenta**: JUnit 5 / MockMvc (Testes de integração com H2 em memória).
+* **Status da Execução**: `BUILD SUCCESS` (Garante que a inicialização do contexto Spring Boot, as migrações e o bloqueio de acessos não autorizados por JWT funcionam perfeitamente).
+<p align="center">
+  <img src="docs/images/build-success.png" width="300" alt="BUILD SUCCESS">
+</p>
+
