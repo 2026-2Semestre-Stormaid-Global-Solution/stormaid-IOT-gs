@@ -1,5 +1,6 @@
 package br.com.stormaid.controller;
 
+import br.com.stormaid.dto.response.CitizenProfileResponse;
 import br.com.stormaid.entity.CitizenProfile;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.service.CitizenProfileService;
@@ -19,17 +20,17 @@ public class CitizenProfileController {
     }
 
     @GetMapping
-    public ResponseEntity<CitizenProfile> getProfile(@AuthenticationPrincipal User user) {
+    public ResponseEntity<CitizenProfileResponse> getProfile(@AuthenticationPrincipal User user) {
         CitizenProfile profile = citizenProfileService.getProfileByUser(user);
-        return ResponseEntity.ok(profile);
+        return ResponseEntity.ok(CitizenProfileResponse.fromEntity(profile));
     }
 
     @PutMapping
-    public ResponseEntity<CitizenProfile> updateProfile(
+    public ResponseEntity<CitizenProfileResponse> updateProfile(
             @AuthenticationPrincipal User user,
             @RequestBody @Valid CitizenProfile updatedData
     ) {
         CitizenProfile updatedProfile = citizenProfileService.updateProfile(user, updatedData);
-        return ResponseEntity.ok(updatedProfile);
+        return ResponseEntity.ok(CitizenProfileResponse.fromEntity(updatedProfile));
     }
 }
