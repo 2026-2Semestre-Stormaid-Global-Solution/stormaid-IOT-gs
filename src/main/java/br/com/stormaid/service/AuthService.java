@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,7 +42,9 @@ public class AuthService {
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String normalizedEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase(Locale.ROOT) : "";
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new RuntimeException("Email already exists");
         }
 
@@ -50,7 +53,7 @@ public class AuthService {
 
         User user = new User();
         user.setFullName(request.getFullName());
-        user.setEmail(request.getEmail().toLowerCase());
+        user.setEmail(normalizedEmail);
         user.setPhoneNumber(request.getPhoneNumber());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setStatus(UserStatus.ACTIVE);
@@ -69,7 +72,8 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        var usernamePassword = new UsernamePasswordAuthenticationToken(request.email().toLowerCase(), request.password());
+        String normalizedEmail = request.email() != null ? request.email().trim().toLowerCase(Locale.ROOT) : "";
+        var usernamePassword = new UsernamePasswordAuthenticationToken(normalizedEmail, request.password());
         var auth = authenticationManager.authenticate(usernamePassword);
         var user = (User) auth.getPrincipal();
 
