@@ -35,8 +35,9 @@ public class IncidentAiConsumer {
                     ragAnalysisService.analyzeIncident(incident);
                 }
             }
-        } catch (Exception e) {
+        }catch (Exception e) {
             log.error("Falha ao processar evento de IA para incidente: {}", e.getMessage());
+            throw new RuntimeException("Falha no processamento da mensagem de IA", e);
         }
     }
 
