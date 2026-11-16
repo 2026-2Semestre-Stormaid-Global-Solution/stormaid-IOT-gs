@@ -44,15 +44,17 @@ public class RabbitMQConfig {
         return new DirectExchange(STATUS_EXCHANGE, true, false);
     }
 
+    public static final String INCIDENT_AI_ROUTING_KEY = "incident.created.ai"; // ou a routing key usada no teu publisher
+
     @Bean
-    public Binding incidentStatusChangedBinding(
-            @Qualifier("incidentStatusChangedQueue") Queue queue,
+    public Binding incidentAiBinding(
+            @Qualifier("incidentAiQueue") Queue queue,
             @Qualifier("stormaidEventsExchange") DirectExchange exchange
     ) {
         return BindingBuilder
                 .bind(queue)
                 .to(exchange)
-                .with(STATUS_CHANGED_ROUTING_KEY);
+                .with(INCIDENT_AI_ROUTING_KEY);
     }
 
     @Bean

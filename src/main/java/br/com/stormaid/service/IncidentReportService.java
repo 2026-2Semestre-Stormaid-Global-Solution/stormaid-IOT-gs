@@ -151,11 +151,6 @@ public class IncidentReportService {
 
         eventPublisher.publishIncidentCreated(saved);
 
-        try {
-            ragAnalysisService.analyzeIncident(saved);
-        } catch (Exception ignored) {
-        }
-
         return mapToResponse(saved);
     }
 
