@@ -43,22 +43,47 @@ public class IncidentEventPublisher {
 
                     @Override
                     public void afterCommit() {
-                        try {
-                            rabbitTemplate.convertAndSend(
-                                    RabbitMQConfig.INCIDENT_CREATED_QUEUE,
-                                    event
-                            );
+                        boolean sent = false;
+                        int maxAttempts = 3;
 
-                            logger.info(
-                                    "Envio ao RabbitMQ solicitado após commit. incidentId={}",
-                                    incidentId
-                            );
+                        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+                            try {
+                                rabbitTemplate.convertAndSend(
+                                        RabbitMQConfig.INCIDENT_CREATED_QUEUE,
+                                        event
+                                );
 
-                        } catch (Exception exception) {
+                                logger.info(
+                                        "Envio ao RabbitMQ realizado com sucesso após commit. incidentId={}, tentativa={}",
+                                        incidentId,
+                                        attempt
+                                );
+                                sent = true;
+                                break;
+
+                            } catch (Exception exception) {
+                                logger.warn(
+                                        "Tentativa {} de {} falhou ao enviar ocorrência ao RabbitMQ após commit. incidentId={}",
+                                        attempt,
+                                        maxAttempts,
+                                        incidentId,
+                                        exception
+                                );
+
+                                try {
+                                    Thread.sleep(1000L * attempt);
+                                } catch (InterruptedException ie) {
+                                    Thread.currentThread().interrupt();
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!sent) {
                             logger.error(
-                                    "Falha ao enviar ocorrência ao RabbitMQ após commit. incidentId={}",
-                                    incidentId,
-                                    exception
+                                    "ERRO CRÍTICO DE RECUPERAÇÃO: Falha definitiva ao enviar ocorrência ao RabbitMQ após {} tentativas. O evento incidentId={} requer reprocessamento.",
+                                    maxAttempts,
+                                    incidentId
                             );
                         }
                     }
