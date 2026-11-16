@@ -3,6 +3,7 @@ package br.com.stormaid.controller;
 import br.com.stormaid.dto.request.ResponderAuthorizationRequest;
 import br.com.stormaid.dto.request.ResponderProvisionRequest;
 import br.com.stormaid.dto.response.ResponderProfileResponse;
+import br.com.stormaid.entity.User;
 import br.com.stormaid.service.ResponderProfileService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -10,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -39,8 +41,9 @@ public class InternalResponderController {
     @PreAuthorize("hasRole('REGULATOR')")
     public ResponseEntity<ResponderProfileResponse> updateAuthorization(
             @PathVariable Long id,
-            @Valid @RequestBody ResponderAuthorizationRequest request) {
-        ResponderProfileResponse response = responderProfileService.updateAuthorization(id, request);
+            @Valid @RequestBody ResponderAuthorizationRequest request,
+            @AuthenticationPrincipal User regulator) {
+        ResponderProfileResponse response = responderProfileService.updateAuthorization(id, request, regulator);
         return ResponseEntity.ok(response);
     }
 
