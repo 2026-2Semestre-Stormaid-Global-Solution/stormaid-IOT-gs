@@ -7,6 +7,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.TextReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,9 @@ public class VectorStoreLoader {
     private final VectorStore vectorStore;
     private final ResourceLoader resourceLoader;
 
+    @Value("${spring.ai.openai.api-key:}")
+    private String apiKey;
+
     public VectorStoreLoader(VectorStore vectorStore, ResourceLoader resourceLoader) {
         this.vectorStore = vectorStore;
         this.resourceLoader = resourceLoader;
@@ -27,6 +31,11 @@ public class VectorStoreLoader {
 
     @PostConstruct
     public void loadKnowledgeBase() {
+        if (apiKey == null || !apiKey.startsWith("sk-") || apiKey.length() < 20) {
+            log.info("Carga do VectorStore ignorada: Chave OpenAI válida não configurada.");
+            return;
+        }
+
         try {
             Resource resource = resourceLoader.getResource("classpath:knowledge/guia-emergencias.md");
             if (resource.exists()) {
@@ -42,7 +51,7 @@ public class VectorStoreLoader {
                 log.warn("Ficheiro guia-emergencias.md não encontrado na pasta knowledge.");
             }
         } catch (Exception e) {
-            log.error("Erro ao carregar a base de conhecimento para o VectorStore: {}", e.getMessage());
+            log.warn("Aviso: Base de conhecimento RAG ignorada devido a restrições na API da OpenAI.");
         }
     }
 }

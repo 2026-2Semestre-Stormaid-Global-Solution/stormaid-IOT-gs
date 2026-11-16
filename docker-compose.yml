@@ -1,0 +1,26 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: stormaid-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - stormaid-network
+
+  oracle-db:
+    image: gvenzl/oracle-free:latest
+    container_name: stormaid-oracle
+    ports:
+      - "1521:1521"
+    environment:
+      - ORACLE_PASSWORD=system_password
+    networks:
+      - stormaid-network
+
+networks:
+  stormaid-network:
+    driver: bridge
