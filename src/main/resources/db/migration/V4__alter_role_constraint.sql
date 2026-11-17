@@ -1,0 +1,6 @@
+-- Remove a restrição antiga da tabela de roles
+ALTER TABLE TB_STORMAID_ROLE DROP CONSTRAINT CK_SA_ROLE_NAME;
+
+-- Recria a restrição permitindo também a role ADMIN
+ALTER TABLE TB_STORMAID_ROLE ADD CONSTRAINT CK_SA_ROLE_NAME
+    CHECK (ROLE_NAME IN ('CITIZEN', 'RESPONDER', 'REGULATOR', 'ADMIN'));
