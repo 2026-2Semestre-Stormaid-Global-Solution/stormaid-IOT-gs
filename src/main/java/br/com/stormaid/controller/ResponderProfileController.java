@@ -4,6 +4,7 @@ import br.com.stormaid.entity.ResponderProfile;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.service.ResponderProfileService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +21,7 @@ public class ResponderProfileController {
     }
 
     @GetMapping("/me/profile")
+    @PreAuthorize("hasRole('RESPONDER')")
     public ResponseEntity<ResponderProfile> getMyProfile(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(responderProfileService.getProfileByUser(user));
     }
