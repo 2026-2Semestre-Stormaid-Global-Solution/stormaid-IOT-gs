@@ -56,6 +56,12 @@ public class IncidentReportService {
             IncidentCreateRequest request,
             String idempotencyKey
     ) {
+        if (request.location() == null ||
+                ((request.location().getAddressText() == null || request.location().getAddressText().isBlank()) &&
+                        (request.location().getLatitude() == null || request.location().getLongitude() == null))) {
+            throw new IllegalArgumentException("A localização deve conter um endereço válido ou coordenadas (latitude e longitude)");
+        }
+
         if (request.channelType() == ChannelType.TEXT_INPUT
                 && (request.textDescription() == null
                 || request.textDescription().isBlank())) {
