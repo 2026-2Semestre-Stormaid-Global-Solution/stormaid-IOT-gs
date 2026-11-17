@@ -35,4 +35,13 @@ public class InternalResponderController {
             @AuthenticationPrincipal User regulator) {
         return ResponseEntity.ok(responderProfileService.updateAuthorization(id, request, regulator));
     }
+
+    @GetMapping("/{userId}/eligibility")
+    @PreAuthorize("hasRole('REGULATOR') or hasRole('SYSTEM')")
+    public ResponseEntity<br.com.stormaid.dto.response.ResponderEligibilityResponse> checkEligibility(
+            @PathVariable Long userId
+    ) {
+        return ResponseEntity.ok(responderProfileService.checkEligibility(userId));
+    }
+
 }
