@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Component
 public class IncidentEventPublisher {
 
@@ -40,7 +43,6 @@ public class IncidentEventPublisher {
 
         TransactionSynchronizationManager.registerSynchronization(
                 new TransactionSynchronization() {
-
                     @Override
                     public void afterCommit() {
                         boolean sent = false;
@@ -82,6 +84,69 @@ public class IncidentEventPublisher {
                         if (!sent) {
                             logger.error(
                                     "ERRO CRÍTICO DE RECUPERAÇÃO: Falha definitiva ao enviar ocorrência ao RabbitMQ após {} tentativas. O evento incidentId={} requer reprocessamento.",
+                                    maxAttempts,
+                                    incidentId
+                            );
+                        }
+                    }
+                }
+        );
+    }
+
+    public void publishIncidentCreatedForAi(IncidentReport incident) {
+        if (!TransactionSynchronizationManager.isActualTransactionActive() || !TransactionSynchronizationManager.isSynchronizationActive()) {
+            throw new IllegalStateException("A publicação do evento de IA exige uma transação ativa");
+        }
+
+        Long incidentId = incident.getId();
+        Map<String, Object> aiPayload = new HashMap<>();
+        aiPayload.put("incidentId", incidentId);
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        boolean sent = false;
+                        int maxAttempts = 3;
+
+                        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+                            try {
+                                // Utiliza a exchange 'stormaid.events' e a routing key 'incident.created.ai'
+                                rabbitTemplate.convertAndSend(
+                                        "stormaid.events",
+                                        "incident.created.ai",
+                                        aiPayload
+                                );
+
+                                logger.info(
+                                        "Envio do evento de IA ao RabbitMQ realizado com sucesso após commit. incidentId={}, tentativa={}",
+                                        incidentId,
+                                        attempt
+                                );
+                                sent = true;
+                                break;
+
+                            } catch (Exception exception) {
+                                logger.warn(
+                                        "Tentativa {} de {} falhou ao enviar evento de IA ao RabbitMQ após commit. incidentId={}",
+                                        attempt,
+                                        maxAttempts,
+                                        incidentId,
+                                        exception
+                                );
+
+                                try {
+                                    Thread.sleep(1000L * attempt);
+                                } catch (InterruptedException ie) {
+                                    Thread.currentThread().interrupt();
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!sent) {
+                            logger.error(
+                                    "ERRO CRÍTICO: Falha definitiva ao enviar evento de IA ao RabbitMQ após {} tentativas. incidentId={}",
                                     maxAttempts,
                                     incidentId
                             );

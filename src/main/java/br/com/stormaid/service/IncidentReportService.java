@@ -151,6 +151,13 @@ public class IncidentReportService {
 
         eventPublisher.publishIncidentCreated(saved);
 
+        try {
+            eventPublisher.publishIncidentCreatedForAi(saved);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(IncidentReportService.class)
+                    .error("Falha ao registar sincronização pós-commit para IA do incidente {}: {}", saved.getId(), e.getMessage());
+        }
+
         return mapToResponse(saved);
     }
 
