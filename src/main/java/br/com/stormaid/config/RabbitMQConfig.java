@@ -7,6 +7,7 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -31,7 +32,10 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue incidentStatusChangedQueue() {
-        return new Queue(INCIDENT_STATUS_CHANGED_QUEUE, true);
+        return QueueBuilder.durable(INCIDENT_STATUS_CHANGED_QUEUE)
+                .withArgument("x-dead-letter-exchange", STATUS_DEAD_LETTER_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", STATUS_DEAD_LETTER_ROUTING_KEY)
+                .build();
     }
 
     @Bean
@@ -39,7 +43,18 @@ public class RabbitMQConfig {
         return new DirectExchange(STATUS_EXCHANGE, true, false);
     }
 
-    public static final String INCIDENT_AI_ROUTING_KEY = "incident.created.ai"; // ou a routing key usada no teu publisher
+    @Bean
+    public Binding incidentStatusChangedBinding(
+            @Qualifier("incidentStatusChangedQueue") Queue queue,
+            @Qualifier("stormaidEventsExchange") DirectExchange exchange
+    ) {
+        return BindingBuilder
+                .bind(queue)
+                .to(exchange)
+                .with(STATUS_CHANGED_ROUTING_KEY);
+    }
+
+    public static final String INCIDENT_AI_ROUTING_KEY = "incident.created.ai";
 
     @Bean
     public Binding incidentAiBinding(
@@ -68,7 +83,6 @@ public class RabbitMQConfig {
                 rabbitObjectMapper
         );
     }
-
 
     @Bean
     public DirectExchange incidentStatusDeadLetterExchange() {
@@ -104,7 +118,7 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue incidentAiQueue() {
-        return org.springframework.amqp.core.QueueBuilder.durable(INCIDENT_AI_QUEUE)
+        return QueueBuilder.durable(INCIDENT_AI_QUEUE)
                 .withArgument("x-dead-letter-exchange", AI_DEAD_LETTER_EXCHANGE)
                 .withArgument("x-dead-letter-routing-key", AI_DEAD_LETTER_ROUTING_KEY)
                 .build();
@@ -130,5 +144,4 @@ public class RabbitMQConfig {
                 .to(exchange)
                 .with(AI_DEAD_LETTER_ROUTING_KEY);
     }
-
 }
