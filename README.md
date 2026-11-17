@@ -124,23 +124,22 @@ Configure as seguintes variáveis no seu ambiente ou no `application.properties`
 
 ```properties
 # Base de Dados Oracle
-spring.datasource.url=jdbc:oracle:thin:@//localhost:1521/XE
-spring.datasource.username=seu_usuario
-spring.datasource.password=sua_senha
-spring.jpa.hibernate.ddl-auto=validate
-spring.flyway.enabled=true
+ORACLE_URL=jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL
+ORACLE_USER=seu_usuario_rm
+ORACLE_PASSWORD=sua_senha_oracle
 
 # Segurança JWT
-api.security.token.secret=${JWT_SECRET:sua_chave_secreta_jwt}
+JWT_SECRET=sua_chave_jwt_super_segura_aqui
 
 # Mensageria RabbitMQ
-spring.rabbitmq.host=${RABBITMQ_HOST:localhost}
-spring.rabbitmq.port=${RABBITMQ_PORT:5672}
-spring.rabbitmq.username=${RABBITMQ_USER:guest}
-spring.rabbitmq.password=${RABBITMQ_PASS:guest}
+RABBITMQ_HOST=127.0.0.1
+RABBITMQ_PORT=5672
+RABBITMQ_USERNAME=stormaid
+RABBITMQ_PASSWORD=sua_senha_rabbitmq
+RABBITMQ_VIRTUAL_HOST=/
 
-# Configuração Spring AI / OpenAI (se aplicável)
-spring.ai.openai.api-key=${OPENAI_API_KEY:sua_chave_ai}
+# Inteligência Artificial (Spring AI / OpenAI)
+API_KEY=sua_chave_api_openai_aqui
 ```
 ---
 
@@ -183,9 +182,19 @@ Os testes de integração utilizam uma configuração isolada em memória com ba
 ```bash
 ./mvnw spring-boot:run
 ```
-
 ---
 
+## 🔑 Contas de Teste Pré-Configuradas
+
+Para facilitar a avaliação, a aplicação inicializa automaticamente contas de teste para cada perfil de acesso do sistema:
+
+| Perfil | E-mail de Acesso | Senha | Descrição |
+| :--- | :--- | :--- | :--- |
+| **CITIZEN** | `cidadao@stormaid.example` | `SenhaForte!2026` | Cidadão comum para abertura de incidentes e dependentes |
+| **RESPONDER** | `carlos.socorrista@stormaid.example` | `SenhaForte!2026` | Socorrista institucional de campo |
+| **REGULATOR** | `regulator@stormaid.example` | `SenhaForte!2026` | Agente regulador e gestor de credenciamento |
+
+---
 ## 📌 Endpoints da API
 
 ### 🔐 1. Autenticação (`/auth`)
