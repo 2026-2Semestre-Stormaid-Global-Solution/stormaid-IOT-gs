@@ -1,70 +1,27 @@
 package br.com.stormaid.service;
 
 import br.com.stormaid.dto.request.ResponderAuthorizationRequest;
-import br.com.stormaid.dto.request.ResponderProvisionRequest;
 import br.com.stormaid.dto.response.ResponderEligibilityResponse;
 import br.com.stormaid.dto.response.ResponderProfileResponse;
 import br.com.stormaid.entity.ResponderProfile;
-import br.com.stormaid.entity.Role;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.enums.ResponderVerificationStatus;
-import br.com.stormaid.enums.UserRole;
 import br.com.stormaid.repository.ResponderProfileRepository;
-import br.com.stormaid.repository.RoleRepository;
-import br.com.stormaid.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.Collections;
 
 @Service
 public class ResponderProfileService {
 
     private final ResponderProfileRepository responderProfileRepository;
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
 
-    public ResponderProfileService(ResponderProfileRepository responderProfileRepository,
-                                   UserRepository userRepository,
-                                   RoleRepository roleRepository,
-                                   PasswordEncoder passwordEncoder) {
+    public ResponderProfileService(ResponderProfileRepository responderProfileRepository) {
         this.responderProfileRepository = responderProfileRepository;
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    @Transactional
-    public ResponderProfileResponse provisionResponder(ResponderProvisionRequest request) {
-        Role responderRole = roleRepository.findByName(UserRole.RESPONDER)
-                .orElseThrow(() -> new RuntimeException("Role RESPONDER não encontrada"));
-
-        User user = new User();
-        user.setFullName(request.getFullName());
-        user.setEmail(request.getEmail());
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setPassword(passwordEncoder.encode(request.getTemporaryPassword()));
-        user.setStatus(br.com.stormaid.enums.UserStatus.ACTIVE);
-        user.setRoles(Collections.singleton(responderRole));
-        User savedUser = userRepository.save(user);
-
-        ResponderProfile profile = new ResponderProfile();
-        profile.setUser(savedUser);
-        profile.setBadgeNumber(request.getBadgeNumber());
-        profile.setInstitutionType(request.getInstitutionType());
-        profile.setVerificationStatus(ResponderVerificationStatus.PENDING);
-        profile.setCreatedAt(Instant.now());
-        profile.setUpdatedAt(Instant.now());
-
-        ResponderProfile savedProfile = responderProfileRepository.save(profile);
-
-        return mapToResponse(savedProfile);
     }
 
     public Page<ResponderProfileResponse> listAll(Pageable pageable) {
