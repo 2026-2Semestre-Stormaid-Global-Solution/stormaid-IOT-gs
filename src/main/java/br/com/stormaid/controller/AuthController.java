@@ -4,6 +4,7 @@ import br.com.stormaid.dto.request.LoginRequest;
 import br.com.stormaid.dto.request.RegisterRequest;
 import br.com.stormaid.dto.response.LoginResponse;
 import br.com.stormaid.dto.response.UserResponse;
+import br.com.stormaid.entity.User;
 import br.com.stormaid.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -34,9 +35,8 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<Object> getCurrentUser(Authentication authentication) {
-        Object principal = authentication.getPrincipal();
-        return ResponseEntity.ok(principal);
+    public ResponseEntity<UserResponse> getCurrentUser(Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        return ResponseEntity.ok(UserResponse.fromEntity(user));
     }
-
 }

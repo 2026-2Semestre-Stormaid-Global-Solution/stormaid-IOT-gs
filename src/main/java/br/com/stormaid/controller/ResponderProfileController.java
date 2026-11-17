@@ -1,5 +1,6 @@
 package br.com.stormaid.controller;
 
+import br.com.stormaid.dto.response.ResponderProfileResponse;
 import br.com.stormaid.entity.ResponderProfile;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.service.ResponderProfileService;
@@ -22,7 +23,8 @@ public class ResponderProfileController {
 
     @GetMapping("/me/profile")
     @PreAuthorize("hasRole('RESPONDER')")
-    public ResponseEntity<ResponderProfile> getMyProfile(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(responderProfileService.getProfileByUser(user));
+    public ResponseEntity<ResponderProfileResponse> getMyProfile(@AuthenticationPrincipal User user) {
+        ResponderProfile profile = responderProfileService.getProfileByUser(user);
+        return ResponseEntity.ok(ResponderProfileResponse.fromEntity(profile));
     }
 }

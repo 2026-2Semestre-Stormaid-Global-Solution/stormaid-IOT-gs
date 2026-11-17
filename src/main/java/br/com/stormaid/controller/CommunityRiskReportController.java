@@ -1,6 +1,7 @@
 package br.com.stormaid.controller;
 
-import br.com.stormaid.entity.CommunityRiskReport;
+import br.com.stormaid.dto.request.CommunityRiskReportRequest;
+import br.com.stormaid.dto.response.CommunityRiskReportResponse;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.service.CommunityRiskReportService;
 import jakarta.validation.Valid;
@@ -24,30 +25,31 @@ public class CommunityRiskReportController {
     }
 
     @PostMapping
-    public ResponseEntity<CommunityRiskReport> create(
+    public ResponseEntity<CommunityRiskReportResponse> create(
             @AuthenticationPrincipal User user,
-            @RequestBody @Valid CommunityRiskReport riskReport
+            @RequestBody @Valid CommunityRiskReportRequest request
     ) {
-        CommunityRiskReport created = riskReportService.createRiskReport(user, riskReport);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        var created = riskReportService.createRiskReport(user, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(CommunityRiskReportResponse.fromEntity(created));
     }
 
     @GetMapping
-    public ResponseEntity<Page<CommunityRiskReport>> list(
+    public ResponseEntity<Page<CommunityRiskReportResponse>> list(
             @AuthenticationPrincipal User user,
             Pageable pageable
     ) {
-        Page<CommunityRiskReport> reports = riskReportService.listByRequester(user, pageable);
+        Page<CommunityRiskReportResponse> reports = riskReportService.listByRequester(user, pageable)
+                .map(CommunityRiskReportResponse::fromEntity);
         return ResponseEntity.ok(reports);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CommunityRiskReport> getById(
+    public ResponseEntity<CommunityRiskReportResponse> getById(
             @AuthenticationPrincipal User user,
             @PathVariable Long id
     ) {
-        CommunityRiskReport report = riskReportService.findByIdAndRequester(id, user);
-        return ResponseEntity.ok(report);
+        var report = riskReportService.findByIdAndRequester(id, user);
+        return ResponseEntity.ok(CommunityRiskReportResponse.fromEntity(report));
     }
 
     @DeleteMapping("/{id}")

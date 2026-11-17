@@ -1,5 +1,6 @@
 package br.com.stormaid.service;
 
+import br.com.stormaid.dto.request.DependentRequest;
 import br.com.stormaid.entity.Dependent;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.repository.DependentRepository;
@@ -18,10 +19,18 @@ public class DependentService {
     }
 
     @Transactional
-    public Dependent createDependent(User guardian, Dependent dependentData) {
-        dependentData.setGuardian(guardian);
-        dependentData.setActive(true);
-        return dependentRepository.save(dependentData);
+    public Dependent createDependent(User guardian, DependentRequest request) {
+        Dependent dependent = new Dependent();
+        dependent.setFullName(request.getFullName());
+
+        if (request.getRelationship() != null) {
+            dependent.setRelationship(br.com.stormaid.enums.RelationshipType.valueOf(request.getRelationship()));
+        }
+
+        dependent.setBirthDate(request.getBirthDate());
+        dependent.setGuardian(guardian);
+        dependent.setActive(true);
+        return dependentRepository.save(dependent);
     }
 
     public Page<Dependent> listByGuardian(User guardian, Pageable pageable) {
@@ -35,12 +44,16 @@ public class DependentService {
     }
 
     @Transactional
-    public Dependent updateDependent(Long id, User guardian, Dependent updatedData) {
+    public Dependent updateDependent(Long id, User guardian, DependentRequest request) {
         Dependent dependent = findByIdAndGuardian(id, guardian);
 
-        dependent.setFullName(updatedData.getFullName());
-        dependent.setRelationship(updatedData.getRelationship());
-        dependent.setBirthDate(updatedData.getBirthDate());
+        dependent.setFullName(request.getFullName());
+
+        if (request.getRelationship() != null) {
+            dependent.setRelationship(br.com.stormaid.enums.RelationshipType.valueOf(request.getRelationship()));
+        }
+
+        dependent.setBirthDate(request.getBirthDate());
 
         return dependentRepository.save(dependent);
     }

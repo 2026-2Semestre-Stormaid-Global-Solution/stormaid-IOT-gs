@@ -1,7 +1,7 @@
 package br.com.stormaid.controller;
 
+import br.com.stormaid.dto.request.DependentRequest;
 import br.com.stormaid.dto.response.DependentResponse;
-import br.com.stormaid.entity.Dependent;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.service.DependentService;
 import jakarta.validation.Valid;
@@ -27,9 +27,9 @@ public class DependentController {
     @PostMapping
     public ResponseEntity<DependentResponse> create(
             @AuthenticationPrincipal User user,
-            @RequestBody @Valid Dependent dependent
+            @RequestBody @Valid DependentRequest request
     ) {
-        Dependent created = dependentService.createDependent(user, dependent);
+        var created = dependentService.createDependent(user, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(DependentResponse.fromEntity(created));
     }
 
@@ -48,7 +48,7 @@ public class DependentController {
             @AuthenticationPrincipal User user,
             @PathVariable Long id
     ) {
-        Dependent dependent = dependentService.findByIdAndGuardian(id, user);
+        var dependent = dependentService.findByIdAndGuardian(id, user);
         return ResponseEntity.ok(DependentResponse.fromEntity(dependent));
     }
 
@@ -56,9 +56,9 @@ public class DependentController {
     public ResponseEntity<DependentResponse> update(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @RequestBody @Valid Dependent dependent
+            @RequestBody @Valid DependentRequest request
     ) {
-        Dependent updated = dependentService.updateDependent(id, user, dependent);
+        var updated = dependentService.updateDependent(id, user, request);
         return ResponseEntity.ok(DependentResponse.fromEntity(updated));
     }
 

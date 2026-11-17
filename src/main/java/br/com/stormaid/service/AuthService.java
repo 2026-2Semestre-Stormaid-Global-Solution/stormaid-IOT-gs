@@ -61,14 +61,7 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
-        return new UserResponse(
-                savedUser.getId(),
-                savedUser.getFullName(),
-                savedUser.getEmail(),
-                savedUser.getPhoneNumber(),
-                savedUser.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toSet()),
-                savedUser.getStatus()
-        );
+        return UserResponse.fromEntity(savedUser);
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -79,14 +72,7 @@ public class AuthService {
 
         String token = tokenService.generateToken(user);
 
-        var userInfo = new UserResponse(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getPhoneNumber(),
-                user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toSet()),
-                user.getStatus()
-        );
+        var userInfo = UserResponse.fromEntity(user);
 
         return new LoginResponse(token, "Bearer", 7200L, userInfo);
     }

@@ -1,5 +1,6 @@
 package br.com.stormaid.controller;
 
+import br.com.stormaid.dto.request.CitizenProfileRequest;
 import br.com.stormaid.dto.response.CitizenProfileResponse;
 import br.com.stormaid.entity.CitizenProfile;
 import br.com.stormaid.entity.User;
@@ -28,9 +29,9 @@ public class CitizenProfileController {
     @PutMapping
     public ResponseEntity<CitizenProfileResponse> updateProfile(
             @AuthenticationPrincipal User user,
-            @RequestBody @Valid CitizenProfile updatedData
+            @RequestBody @Valid CitizenProfileRequest request
     ) {
-        CitizenProfile updatedProfile = citizenProfileService.updateProfile(user, updatedData);
+        CitizenProfile updatedProfile = citizenProfileService.updateProfile(user, request);
         return ResponseEntity.ok(CitizenProfileResponse.fromEntity(updatedProfile));
     }
 }

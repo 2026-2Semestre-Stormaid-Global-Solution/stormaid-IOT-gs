@@ -113,8 +113,8 @@ public class AdminUserService {
         res.setEmail(profile.getUser().getEmail());
         res.setPhoneNumber(profile.getUser().getPhoneNumber());
         res.setBadgeNumber(profile.getBadgeNumber());
-        res.setInstitutionType(profile.getInstitutionType());
-        res.setVerificationStatus(profile.getVerificationStatus());
+        res.setInstitutionType(profile.getInstitutionType() != null ? profile.getInstitutionType().name() : null);
+        res.setVerificationStatus(profile.getVerificationStatus() != null ? profile.getVerificationStatus().name() : null);
         res.setAuthorizedAt(profile.getAuthorizedAt());
         res.setCreatedAt(profile.getCreatedAt());
         if (profile.getAuthorizedBy() != null) {
@@ -129,7 +129,7 @@ public class AdminUserService {
         res.setFullName(user.getFullName());
         res.setEmail(user.getEmail());
         res.setPhoneNumber(user.getPhoneNumber());
-        res.setStatus(user.getStatus());
+        res.setStatus(user.getStatus() != null ? user.getStatus().name() : null);
         res.setRoles(user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toSet()));
         res.setCreatedAt(user.getCreatedAt());
         res.setUpdatedAt(user.getUpdatedAt());

@@ -74,8 +74,8 @@ public class ResponderProfileService {
         res.setEmail(profile.getUser().getEmail());
         res.setPhoneNumber(profile.getUser().getPhoneNumber());
         res.setBadgeNumber(profile.getBadgeNumber());
-        res.setInstitutionType(profile.getInstitutionType());
-        res.setVerificationStatus(profile.getVerificationStatus());
+        res.setInstitutionType(profile.getInstitutionType() != null ? profile.getInstitutionType().name() : null);
+        res.setVerificationStatus(profile.getVerificationStatus() != null ? profile.getVerificationStatus().name() : null);
         res.setAuthorizedAt(profile.getAuthorizedAt());
         res.setCreatedAt(profile.getCreatedAt());
         if (profile.getAuthorizedBy() != null) {

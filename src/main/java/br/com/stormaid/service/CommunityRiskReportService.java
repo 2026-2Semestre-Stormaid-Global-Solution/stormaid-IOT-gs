@@ -1,5 +1,6 @@
 package br.com.stormaid.service;
 
+import br.com.stormaid.dto.request.CommunityRiskReportRequest;
 import br.com.stormaid.entity.CommunityRiskReport;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.enums.CommunityRiskStatus;
@@ -21,11 +22,23 @@ public class CommunityRiskReportService {
     }
 
     @Transactional
-    public CommunityRiskReport createRiskReport(User requester, CommunityRiskReport riskReport) {
+    public CommunityRiskReport createRiskReport(User requester, CommunityRiskReportRequest request) {
+        CommunityRiskReport riskReport = new CommunityRiskReport();
+
+        riskReport.setDescription(request.getDescription());
+
+        if (request.getLatitude() != null) {
+            riskReport.setLatitude(new java.math.BigDecimal(request.getLatitude().toString()));
+        }
+        if (request.getLongitude() != null) {
+            riskReport.setLongitude(new java.math.BigDecimal(request.getLongitude().toString()));
+        }
+
         riskReport.setRequester(requester);
-        riskReport.setStatus(CommunityRiskStatus.REPORTED);
-        riskReport.setCreatedAt(Instant.now());
-        riskReport.setUpdatedAt(Instant.now());
+        riskReport.setStatus(br.com.stormaid.enums.CommunityRiskStatus.REPORTED);
+        riskReport.setCreatedAt(java.time.Instant.now());
+        riskReport.setUpdatedAt(java.time.Instant.now());
+
         return riskReportRepository.save(riskReport);
     }
 

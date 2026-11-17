@@ -80,7 +80,7 @@ public class UserController {
         res.setEmail(user.getEmail());
         res.setPhoneNumber(user.getPhoneNumber());
         res.setRoles(roleNames);
-        res.setStatus(user.getStatus());
+        res.setStatus(user.getStatus() != null ? user.getStatus().name() : null);
         res.setCreatedAt(user.getCreatedAt());
         res.setUpdatedAt(user.getUpdatedAt());
         return res;
