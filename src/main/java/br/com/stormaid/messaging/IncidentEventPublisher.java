@@ -29,6 +29,7 @@ public class IncidentEventPublisher {
         }
 
         Long incidentId = incident.getId();
+        String idempotencyKey = incident.getIdempotencyKey();
 
         IncidentCreatedEvent event = new IncidentCreatedEvent(
                 incidentId,
@@ -56,8 +57,9 @@ public class IncidentEventPublisher {
                                 );
 
                                 logger.info(
-                                        "Envio ao RabbitMQ realizado com sucesso após commit. incidentId={}, tentativa={}",
+                                        "Envio ao RabbitMQ realizado com sucesso após commit. incidentId={}, idempotencyKey={}, tentativa={}",
                                         incidentId,
+                                        idempotencyKey,
                                         attempt
                                 );
                                 sent = true;
@@ -65,15 +67,15 @@ public class IncidentEventPublisher {
 
                             } catch (Exception exception) {
                                 logger.warn(
-                                        "Tentativa {} de {} falhou ao enviar ocorrência ao RabbitMQ após commit. incidentId={}",
+                                        "Tentativa {} de {} falhou ao enviar ocorrência ao RabbitMQ após commit. incidentId={}, erro={}",
                                         attempt,
                                         maxAttempts,
                                         incidentId,
-                                        exception
+                                        exception.getMessage()
                                 );
 
                                 try {
-                                    Thread.sleep(1000L * attempt);
+                                    Thread.sleep(1500L * attempt);
                                 } catch (InterruptedException ie) {
                                     Thread.currentThread().interrupt();
                                     break;
@@ -83,9 +85,10 @@ public class IncidentEventPublisher {
 
                         if (!sent) {
                             logger.error(
-                                    "ERRO CRÍTICO DE RECUPERAÇÃO: Falha definitiva ao enviar ocorrência ao RabbitMQ após {} tentativas. O evento incidentId={} requer reprocessamento.",
-                                    maxAttempts,
-                                    incidentId
+                                    "ERRO CRÍTICO DE RECUPERAÇÃO: Falha definitiva ao publicar incidente incidentId={} (idempotencyKey={}) após {} tentativas. O evento requer reprocessamento operacional.",
+                                    incidentId,
+                                    idempotencyKey,
+                                    maxAttempts
                             );
                         }
                     }
@@ -111,7 +114,6 @@ public class IncidentEventPublisher {
 
                         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
                             try {
-                                // Utiliza a exchange 'stormaid.events' e a routing key 'incident.created.ai'
                                 rabbitTemplate.convertAndSend(
                                         "stormaid.events",
                                         "incident.created.ai",
