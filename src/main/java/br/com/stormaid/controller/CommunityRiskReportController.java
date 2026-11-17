@@ -60,4 +60,14 @@ public class CommunityRiskReportController {
         riskReportService.deleteRiskReport(id, user);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<CommunityRiskReportResponse> update(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @RequestBody @Valid CommunityRiskReportRequest request
+    ) {
+        var updated = riskReportService.updateRiskReport(id, user, request);
+        return ResponseEntity.ok(CommunityRiskReportResponse.fromEntity(updated));
+    }
 }

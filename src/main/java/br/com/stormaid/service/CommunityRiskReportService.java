@@ -57,4 +57,23 @@ public class CommunityRiskReportService {
         CommunityRiskReport report = findByIdAndRequester(id, requester);
         riskReportRepository.delete(report);
     }
+
+    @Transactional
+    public CommunityRiskReport updateRiskReport(Long id, User requester, CommunityRiskReportRequest request) {
+        CommunityRiskReport report = findByIdAndRequester(id, requester);
+
+        if (request.getDescription() != null) {
+            report.setDescription(request.getDescription());
+        }
+        if (request.getLatitude() != null) {
+            report.setLatitude(new java.math.BigDecimal(request.getLatitude().toString()));
+        }
+        if (request.getLongitude() != null) {
+            report.setLongitude(new java.math.BigDecimal(request.getLongitude().toString()));
+        }
+
+        report.setUpdatedAt(Instant.now());
+
+        return riskReportRepository.save(report);
+    }
 }
