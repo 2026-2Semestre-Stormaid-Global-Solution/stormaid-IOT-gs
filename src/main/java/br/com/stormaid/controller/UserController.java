@@ -74,14 +74,16 @@ public class UserController {
                   .collect(java.util.stream.Collectors.toSet())
                 : java.util.Set.<String>of();
 
-        return new UserResponse(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getPhoneNumber(),
-                roleNames,
-                user.getStatus()
-        );
+        UserResponse res = new UserResponse();
+        res.setId(user.getId());
+        res.setFullName(user.getFullName());
+        res.setEmail(user.getEmail());
+        res.setPhoneNumber(user.getPhoneNumber());
+        res.setRoles(roleNames);
+        res.setStatus(user.getStatus());
+        res.setCreatedAt(user.getCreatedAt());
+        res.setUpdatedAt(user.getUpdatedAt());
+        return res;
     }
 
     public record UpdateUserRequest(
