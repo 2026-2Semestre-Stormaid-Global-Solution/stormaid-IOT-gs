@@ -33,6 +33,12 @@ public class DataInitializer {
                 return roleRepository.save(r);
             });
 
+            Role adminRole = roleRepository.findByName(UserRole.ADMIN).orElseGet(() -> {
+                Role r = new Role();
+                r.setName(UserRole.ADMIN);
+                return roleRepository.save(r);
+            });
+
             if (userRepository.findByEmail("regulator@stormaid.example").isEmpty()) {
                 User regulator = new User();
                 regulator.setFullName("Regulator Teste");
