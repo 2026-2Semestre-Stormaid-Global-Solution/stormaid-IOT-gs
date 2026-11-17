@@ -1,13 +1,9 @@
 [
   {
-    "chunkId": "DEFESA-CIVIL-01-001",
     "documentId": "DEFESA-CIVIL-01",
-    "title": "Guia de Emergências e Alagamentos",
+    "title": "Saiba como agir em enchentes",
     "publisher": "Secretaria Nacional de Proteção e Defesa Civil",
     "sourceUrl": "https://www.gov.br/mdr/pt-br/assuntos/protecao-e-defesa-civil/saiba-como-agir",
-    "topic": "FLOOD_RISK",
-    "section": "Alagamentos",
-    "corpusVersion": "1.0",
-    "retrievedAt": "2026-11-08"
+    "corpusVersion": "1.0"
   }
 ]
