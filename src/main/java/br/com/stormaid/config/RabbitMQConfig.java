@@ -30,11 +30,6 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Queue incidentAiQueue() {
-        return new Queue(INCIDENT_AI_QUEUE, true);
-    }
-
-    @Bean
     public Queue incidentStatusChangedQueue() {
         return new Queue(INCIDENT_STATUS_CHANGED_QUEUE, true);
     }
@@ -101,6 +96,39 @@ public class RabbitMQConfig {
                 .bind(queue)
                 .to(exchange)
                 .with(STATUS_DEAD_LETTER_ROUTING_KEY);
+    }
+
+    public static final String AI_DEAD_LETTER_EXCHANGE = "stormaid.ai.dlx";
+    public static final String AI_DEAD_LETTER_QUEUE = "stormaid.incident.ai.dlq";
+    public static final String AI_DEAD_LETTER_ROUTING_KEY = "incident.ai.dead";
+
+    @Bean
+    public Queue incidentAiQueue() {
+        return org.springframework.amqp.core.QueueBuilder.durable(INCIDENT_AI_QUEUE)
+                .withArgument("x-dead-letter-exchange", AI_DEAD_LETTER_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", AI_DEAD_LETTER_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    public DirectExchange incidentAiDeadLetterExchange() {
+        return new DirectExchange(AI_DEAD_LETTER_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue incidentAiDeadLetterQueue() {
+        return new Queue(AI_DEAD_LETTER_QUEUE, true);
+    }
+
+    @Bean
+    public Binding incidentAiDeadLetterBinding(
+            @Qualifier("incidentAiDeadLetterQueue") Queue queue,
+            @Qualifier("incidentAiDeadLetterExchange") DirectExchange exchange
+    ) {
+        return BindingBuilder
+                .bind(queue)
+                .to(exchange)
+                .with(AI_DEAD_LETTER_ROUTING_KEY);
     }
 
 }
