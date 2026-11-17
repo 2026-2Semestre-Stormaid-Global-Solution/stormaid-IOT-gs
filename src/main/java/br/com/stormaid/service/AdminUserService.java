@@ -1,7 +1,9 @@
 package br.com.stormaid.service;
 
+import br.com.stormaid.dto.request.RegulatorProvisionRequest;
 import br.com.stormaid.dto.request.ResponderProvisionRequest;
 import br.com.stormaid.dto.response.ResponderProfileResponse;
+import br.com.stormaid.dto.response.UserResponse;
 import br.com.stormaid.entity.ResponderProfile;
 import br.com.stormaid.entity.Role;
 import br.com.stormaid.entity.User;
@@ -16,8 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminUserService {
@@ -39,7 +43,6 @@ public class AdminUserService {
 
     @Transactional
     public ResponderProfileResponse provisionResponder(ResponderProvisionRequest request) {
-
         String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
         if (userRepository.existsByEmail(normalizedEmail)) {
@@ -57,7 +60,6 @@ public class AdminUserService {
         user.setFullName(request.getFullName().trim());
         user.setEmail(normalizedEmail);
         user.setPhoneNumber(request.getPhoneNumber());
-
         user.setPassword(passwordEncoder.encode(request.getTemporaryPassword()));
         user.setStatus(UserStatus.ACTIVE);
         user.setRoles(Collections.singleton(responderRole));
@@ -74,10 +76,36 @@ public class AdminUserService {
 
         ResponderProfile savedProfile = responderProfileRepository.save(profile);
 
-        return mapToResponse(savedProfile);
+        return mapToResponderResponse(savedProfile);
     }
 
-    private ResponderProfileResponse mapToResponse(ResponderProfile profile) {
+    @Transactional
+    public UserResponse provisionRegulator(RegulatorProvisionRequest request) {
+        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new IllegalArgumentException("E-mail já cadastrado no sistema.");
+        }
+
+        Role regulatorRole = roleRepository.findByName(UserRole.REGULATOR)
+                .orElseThrow(() -> new RuntimeException("Role REGULATOR não encontrada"));
+
+        User user = new User();
+        user.setFullName(request.getFullName().trim());
+        user.setEmail(normalizedEmail);
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setPassword(passwordEncoder.encode(request.getTemporaryPassword()));
+        user.setStatus(UserStatus.ACTIVE);
+        user.setRoles(Collections.singleton(regulatorRole));
+        user.setCreatedAt(LocalDateTime.now());
+        user.setUpdatedAt(LocalDateTime.now());
+
+        User savedUser = userRepository.save(user);
+
+        return mapToUserResponse(savedUser);
+    }
+
+    private ResponderProfileResponse mapToResponderResponse(ResponderProfile profile) {
         ResponderProfileResponse res = new ResponderProfileResponse();
         res.setId(profile.getId());
         res.setUserId(profile.getUser().getId());
@@ -92,6 +120,19 @@ public class AdminUserService {
         if (profile.getAuthorizedBy() != null) {
             res.setAuthorizedByUserId(profile.getAuthorizedBy().getId());
         }
+        return res;
+    }
+
+    private UserResponse mapToUserResponse(User user) {
+        UserResponse res = new UserResponse();
+        res.setId(user.getId());
+        res.setFullName(user.getFullName());
+        res.setEmail(user.getEmail());
+        res.setPhoneNumber(user.getPhoneNumber());
+        res.setStatus(user.getStatus());
+        res.setRoles(user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toSet()));
+        res.setCreatedAt(user.getCreatedAt());
+        res.setUpdatedAt(user.getUpdatedAt());
         return res;
     }
 }
