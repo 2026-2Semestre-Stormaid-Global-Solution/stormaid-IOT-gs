@@ -81,21 +81,29 @@ public class PasswordRecoveryService {
             throw new RuntimeException("O código de recuperação expirou");
         }
 
+        if (resetCode.getAttempts() >= 5) {
+            resetCode.setUsed(true);
+            resetCodeRepository.save(resetCode);
+            throw new RuntimeException("Número máximo de tentativas excedido. Solicite um novo código.");
+        }
+
         if (!passwordEncoder.matches(request.getCode(), resetCode.getCodeHash())) {
+            resetCode.setAttempts(resetCode.getAttempts() + 1);
+            resetCodeRepository.save(resetCode);
             throw new RuntimeException("Código incorreto");
         }
 
         resetCode.setUsed(true);
         resetCodeRepository.save(resetCode);
 
-        String tempToken = tokenService.generateToken(user);
+        String tempToken = tokenService.generatePasswordResetToken(user);
 
         return new PasswordRecoveryVerifyResponse(tempToken, "Código validado com sucesso");
     }
 
     @Transactional
     public void resetPassword(PasswordRecoveryResetRequest request) {
-        String email = tokenService.validateToken(request.getToken());
+        String email = tokenService.validatePasswordResetToken(request.getToken());
         if (email == null || email.isBlank()) {
             throw new RuntimeException("Token temporário inválido ou expirado");
         }

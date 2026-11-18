@@ -49,4 +49,34 @@ public class TokenService {
     private Instant genExpirationDate() {
         return Instant.now().plusSeconds(7200);
     }
+
+    public String generatePasswordResetToken(User user) {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            return JWT.create()
+                    .withIssuer("stormaid-api")
+                    .withAudience("stormaid-password-reset")
+                    .withSubject(user.getEmail())
+                    .withClaim("purpose", "PASSWORD_RESET")
+                    .withExpiresAt(Instant.now().plusSeconds(300))
+                    .sign(algorithm);
+        } catch (JWTCreationException exception) {
+            throw new RuntimeException("Erro ao gerar token de redefinição de senha", exception);
+        }
+    }
+
+    public String validatePasswordResetToken(String token) {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            return JWT.require(algorithm)
+                    .withIssuer("stormaid-api")
+                    .withAudience("stormaid-password-reset")
+                    .withClaim("purpose", "PASSWORD_RESET")
+                    .build()
+                    .verify(token)
+                    .getSubject();
+        } catch (JWTVerificationException exception) {
+            return "";
+        }
+    }
 }

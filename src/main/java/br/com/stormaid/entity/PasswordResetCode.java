@@ -30,4 +30,6 @@ public class PasswordResetCode {
 
     @Column(name = "USED", nullable = false)
     private boolean used;
+
+    private int attempts = 0;
 }
