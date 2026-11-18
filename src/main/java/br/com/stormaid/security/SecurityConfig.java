@@ -40,24 +40,20 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(
-                                new AntPathRequestMatcher("/swagger-ui/**"),
-                                new AntPathRequestMatcher("/v3/api-docs/**"),
-                                new AntPathRequestMatcher("/swagger-ui.html"),
-                                new AntPathRequestMatcher("/h2-console/**")
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html",
+                                "/h2-console/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/weather/**").permitAll()
                         .requestMatchers(
-                                new AntPathRequestMatcher("/api/v1/auth/login"),
-                                new AntPathRequestMatcher("/api/v1/auth/register"),
-                                new AntPathRequestMatcher("/api/v1/addresses/**"),
-                                new AntPathRequestMatcher("/api/v1/password-recovery/**")
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/register",
+                                "/api/v1/addresses/**",
+                                "/api/v1/password-recovery/**"
                         ).permitAll()
-                        .requestMatchers(
-                                new AntPathRequestMatcher("/api/v1/admin/**")
-                        ).hasRole("ADMIN")
-                        .requestMatchers(
-                                new AntPathRequestMatcher("/api/v1/internal/**")
-                        ).hasRole("REGULATOR")
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/internal/**").hasRole("REGULATOR")
                         .anyRequest().authenticated()
                 )
                 .headers(headers ->

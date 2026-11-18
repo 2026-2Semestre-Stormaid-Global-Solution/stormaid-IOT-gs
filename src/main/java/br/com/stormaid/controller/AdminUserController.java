@@ -1,6 +1,8 @@
 package br.com.stormaid.controller;
 
 import br.com.stormaid.dto.request.RegulatorProvisionRequest;
+import br.com.stormaid.dto.request.ResponderProvisionRequest;
+import br.com.stormaid.dto.response.ResponderProfileResponse;
 import br.com.stormaid.dto.response.UserResponse;
 import br.com.stormaid.service.AdminUserService;
 import jakarta.validation.Valid;
@@ -24,6 +26,13 @@ public class AdminUserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserResponse> provisionRegulator(@RequestBody @Valid RegulatorProvisionRequest request) {
         UserResponse response = adminUserService.provisionRegulator(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/responders")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ResponderProfileResponse> provisionResponder(@RequestBody @Valid ResponderProvisionRequest request) {
+        ResponderProfileResponse response = adminUserService.provisionResponder(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
