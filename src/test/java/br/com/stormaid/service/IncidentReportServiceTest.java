@@ -65,6 +65,10 @@ class IncidentReportServiceTest {
 
         lenient().when(request.dependentId())
                 .thenReturn((Long) null);
+
+        br.com.stormaid.embeddable.IncidentLocation loc = new br.com.stormaid.embeddable.IncidentLocation();
+        loc.setAddressText("São Paulo - SP");
+        lenient().when(request.location()).thenReturn(loc);
     }
 
     @Test
@@ -445,4 +449,6 @@ class IncidentReportServiceTest {
 
         return previous;
     }
+
+
 }

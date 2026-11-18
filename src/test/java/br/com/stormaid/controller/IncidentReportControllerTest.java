@@ -17,26 +17,29 @@ import br.com.stormaid.service.IncidentReportService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
-import java.util.Optional;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(IncidentReportController.class)
-@AutoConfigureMockMvc
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class})
 class IncidentReportControllerTest {
 
@@ -77,12 +80,17 @@ class IncidentReportControllerTest {
         requester.setStatus(UserStatus.ACTIVE);
     }
 
-    private void authenticateRequester() {
-        when(tokenService.validateToken("token-teste"))
-                .thenReturn("cidadao@teste.com");
-
-        when(userRepository.findByEmail("cidadao@teste.com"))
-                .thenReturn(Optional.of(requester));
+    /**
+     * Autenticação com a entidade User real como principal (necessário para
+     * @AuthenticationPrincipal User) e a authority ROLE_CITIZEN exigida pelo
+     * @PreAuthorize("hasRole('CITIZEN')") do controller.
+     */
+    private Authentication citizenAuth() {
+        return new UsernamePasswordAuthenticationToken(
+                requester,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_CITIZEN"))
+        );
     }
 
     private IncidentResponse response() {
@@ -100,16 +108,14 @@ class IncidentReportControllerTest {
 
     @Test
     void shouldCreateIncidentWithIdempotencyHeader() throws Exception {
-        authenticateRequester();
-
         when(incidentReportService.createIncident(
-                eq(requester),
+                any(User.class),
                 any(IncidentCreateRequest.class),
                 eq("teste-http-001")
         )).thenReturn(response());
 
         mockMvc.perform(post("/api/v1/incidents")
-                        .header("Authorization", "Bearer token-teste")
+                        .with(authentication(citizenAuth()))
                         .header("Idempotency-Key", "teste-http-001")
                         .contentType("application/json")
                         .content(REQUEST_JSON))
@@ -118,7 +124,7 @@ class IncidentReportControllerTest {
                 .andExpect(jsonPath("$.requesterUserId").value(1));
 
         verify(incidentReportService).createIncident(
-                eq(requester),
+                any(User.class),
                 any(IncidentCreateRequest.class),
                 eq("teste-http-001")
         );
@@ -126,10 +132,8 @@ class IncidentReportControllerTest {
 
     @Test
     void shouldRejectIdempotencyConflict() throws Exception {
-        authenticateRequester();
-
         when(incidentReportService.createIncident(
-                eq(requester),
+                any(User.class),
                 any(IncidentCreateRequest.class),
                 eq("teste-http-001")
         )).thenThrow(new ResponseStatusException(
@@ -138,7 +142,7 @@ class IncidentReportControllerTest {
         ));
 
         mockMvc.perform(post("/api/v1/incidents")
-                        .header("Authorization", "Bearer token-teste")
+                        .with(authentication(citizenAuth()))
                         .header("Idempotency-Key", "teste-http-001")
                         .contentType("application/json")
                         .content(REQUEST_JSON))
@@ -155,10 +159,8 @@ class IncidentReportControllerTest {
 
     @Test
     void shouldRejectInvalidIncidentRequest() throws Exception {
-        authenticateRequester();
-
         mockMvc.perform(post("/api/v1/incidents")
-                        .header("Authorization", "Bearer token-teste")
+                        .with(authentication(citizenAuth()))
                         .contentType("application/json")
                         .content("{}"))
                 .andExpect(status().isBadRequest());
