@@ -22,7 +22,7 @@ public class PasswordRecoveryController {
     @PostMapping("/request")
     public ResponseEntity<Void> requestRecovery(@RequestBody @Valid PasswordRecoveryRequest request) {
         recoveryService.requestRecovery(request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/verify")
