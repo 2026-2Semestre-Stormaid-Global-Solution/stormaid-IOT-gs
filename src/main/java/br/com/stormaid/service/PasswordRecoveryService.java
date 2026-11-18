@@ -113,5 +113,10 @@ public class PasswordRecoveryService {
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        resetCodeRepository.findByUserAndUsedFalse(user).ifPresent(activeCode -> {
+            activeCode.setUsed(true);
+            resetCodeRepository.save(activeCode);
+        });
     }
 }
