@@ -11,9 +11,11 @@ import java.util.Map;
 public class WeatherService {
 
     private final WeatherApiClient weatherApiClient;
+    private final WeatherMessageService weatherMessageService;
 
-    public WeatherService(WeatherApiClient weatherApiClient) {
+    public WeatherService(WeatherApiClient weatherApiClient, WeatherMessageService weatherMessageService) {
         this.weatherApiClient = weatherApiClient;
+        this.weatherMessageService = weatherMessageService;
     }
 
     public WeatherResponse getWeatherSummary(double latitude, double longitude) {
@@ -38,8 +40,9 @@ public class WeatherService {
         Integer weatherCode = ((Number) current.get("weather_code")).intValue();
         Double windSpeed = ((Number) current.get("wind_speed_10m")).doubleValue();
 
-        String condition = interpretCondition(weatherCode);
-        String description = interpretDescription(weatherCode);
+        String condition = weatherMessageService.interpretCondition(weatherCode);
+        String description = weatherMessageService.interpretDescription(weatherCode);
+        String message = weatherMessageService.generateMessage(weatherCode, precipitation);
 
         return WeatherResponse.builder()
                 .temperature(temperature)
@@ -48,26 +51,10 @@ public class WeatherService {
                 .description(description)
                 .rainProbability(precipitation > 0 ? 80 : 10)
                 .weatherCode(weatherCode)
-                .message("Previsão obtida com sucesso para a localização.")
+                .message(message)
                 .source("Open-Meteo")
                 .status("AVAILABLE")
                 .updatedAt(OffsetDateTime.now().toString())
                 .build();
-    }
-
-    private String interpretCondition(int code) {
-        if (code == 0) return "CLEAR";
-        if (code >= 1 && code <= 3) return "CLOUDY";
-        if (code >= 51 && code <= 67) return "RAIN";
-        if (code >= 95) return "THUNDERSTORM";
-        return "FAIR";
-    }
-
-    private String interpretDescription(int code) {
-        if (code == 0) return "Céu limpo";
-        if (code >= 1 && code <= 3) return "Parcialmente nublado";
-        if (code >= 51 && code <= 67) return "Chuva moderada/fraca";
-        if (code >= 95) return "Trovoada";
-        return "Condição estável";
     }
 }
