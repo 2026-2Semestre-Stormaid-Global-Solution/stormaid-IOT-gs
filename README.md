@@ -76,10 +76,10 @@ LINK YOUTUBE
 
 ## 🤖 Declaração de Uso de Inteligência Artificial (Spring AI & RAG)
 
-- O StormAid utiliza componentes de Spring AI para auxiliar na triagem automatizada e análise contextual de ocorrências:
-- RagAnalysisService: Realiza a recuperação de contexto e análise inteligente dos incidentes registados.
-- Transcrição de Áudio (Simulada): O sistema suporta rotinas assíncronas para processamento de áudios de emergência (com transcrição simulada baseada em chaves de armazenamento para fins de demonstração académica).
-- Mensageria com IA: Os eventos de criação de incidentes são encaminhados via RabbitMQ (incident.ai.queue) para processamento assíncrono por IA, garantindo alta disponibilidade e desacoplamento síncrono.
+- **Ferramentas Utilizadas**: Spring AI integrado com modelos OpenAI (LLM e Embeddings) e recuperação de contexto vetorial (RAG).
+- **Fluxo Real de Spring AI / RAG**: Quando uma ocorrência é criada, o evento é publicado no RabbitMQ (`incident.ai.queue`). O consumidor aciona o `RagAnalysisService`, que consulta a base de conhecimento do sistema para recuperar contexto relevante e gera uma análise automatizada de triagem e risco persistida na ocorrência.
+- **Transcrição de Áudio (Simulada vs. Real)**: O sistema suporta rotinas assíncronas para processamento de áudios de emergência utilizando atualmente uma **transcrição simulada** (baseada em metadados/chaves de teste pré-definidos para demonstração académica), diferindo de uma **transcrição real** via APIs de Speech-to-Text (como Whisper) em tempo real.
+- **Limitações**: A análise depende da disponibilidade e quota da API externa da OpenAI e do contexto previamente indexado na base de conhecimento; em caso de falha na API externa, o sistema aplica fallback sem bloquear o registo da ocorrência.
 
 ---
 
@@ -102,13 +102,14 @@ USER o|--o{ RESPONDER_PROFILE : authorizes
 ```
 ---
 
-## 🔐 Roles e Perfis de Acesso
+## 🔐 Roles e Perfis de Acesso (Os Quatro Perfis)
 
-O sistema utiliza três perfis (roles) de autorização bem definidos:
+O sistema utiliza quatro perfis (roles) de autorização distintos:
 
 1. `CITIZEN`: Cidadão comum com permissão para gerenciar seu próprio perfil, cadastrar dependentes, registrar ocorrências de incidentes e relatos de riscos comunitários.
-2. `RESPONDER`: Socorrista institucional responsável pelo atendimento de emergências no local das ocorrências.
-3. `REGULATOR`: Agente regulador encarregado da triagem, verificação de credenciais e gestão estratégica de equipes de resposta.
+2. `RESPONDER`: Socorrista institucional responsável pelo atendimento de emergências no local. O **cadastro institucional** do socorrista é submetido no sistema e permanece pendente de validação até ser analisado e aprovado por um `REGULATOR` através do fluxo interno de credenciamento.
+3. `REGULATOR`: Agente regulador encarregado da triagem, verificação de credenciais institucionais, aprovação/autorização de socorristas (`RESPONDER`) e gestão estratégica de equipes.
+4. `ADMIN`: Administrador global do sistema, com permissão para gestão avançada de utilizadores, controlo de acessos e auditoria administrativa.
 
 ---
 
@@ -184,6 +185,14 @@ Os testes de integração utilizam uma configuração isolada em memória com ba
 ```
 ---
 
+### Execução via Docker e Docker Compose
+
+1. **Subir os serviços de infraestrutura (RabbitMQ e Oracle):**
+   ```bash
+   docker-compose up -d
+   ```
+---
+
 ## 🔑 Contas de Teste Pré-Configuradas
 
 Para facilitar a avaliação, a aplicação inicializa automaticamente contas de teste para cada perfil de acesso do sistema:
@@ -193,6 +202,7 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 | **CITIZEN** | `cidadao@stormaid.example` | `SenhaForte!2026` | Cidadão comum para abertura de incidentes e dependentes |
 | **RESPONDER** | `carlos.socorrista@stormaid.example` | `SenhaForte!2026` | Socorrista institucional de campo |
 | **REGULATOR** | `regulator@stormaid.example` | `SenhaForte!2026` | Agente regulador e gestor de credenciamento |
+| **ADMIN** | `admin@stormaid.example` | `SenhaForte!2026` | Administrador global do sistema |
 
 ---
 ## 📌 Endpoints da API
@@ -257,12 +267,19 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 | `GET` | `/api/v1/internal/responders` | Lista socorristas cadastrados | `REGULATOR` |
 | `GET` | `/api/v1/internal/responders/{id}` | Busca socorrista por ID | `REGULATOR` |
 | `PATCH` | `/api/v1/internal/responders/{id}/authorization` | Atualiza status de verificação/credenciamento | `REGULATOR` |
+| `GET` | `/api/v1/internal/{userId}/eligibility` | Consulta elegibilidade institucional do socorrista | `REGULATOR`, `ADMIN` |
 
 ---
+### ⚙️ 7. Administração do Sistema (`/api/v1/admin`)
 
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `GET` | `/api/v1/admin/users` | Lista todos os utilizadores cadastrados no sistema | `ADMIN` |
+| `DELETE` | `/api/v1/admin/users/{id}` | Remove ou desativa um utilizador | `ADMIN` |
+| `GET` | `/api/v1/admin/audit-logs` | Consulta logs administrativos e de auditoria | `ADMIN` |
 ---
 
-## 📸 Evidências e Testes da Aplicação (JAVA-14)
+## 📸 Evidências e Testes da Aplicação 
 
 Esta secção documenta as evidências de execução, testes funcionais, validação de regras de negócio e a robustez de segurança implementada na API do StormAid.
 
