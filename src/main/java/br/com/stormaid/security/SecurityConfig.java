@@ -4,6 +4,7 @@ import br.com.stormaid.repository.UserRepository;
 import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -18,54 +19,70 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
+import java.util.Arrays;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final Environment environment;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          Environment environment) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.environment = environment;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
+        boolean isDevOrTest = Arrays.stream(environment.getActiveProfiles())
+                .anyMatch(profile -> profile.equalsIgnoreCase("dev")
+                        || profile.equalsIgnoreCase("local")
+                        || profile.equalsIgnoreCase("test"));
+
+        http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-                .authorizeHttpRequests(auth -> auth
-                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui.html",
-                                "/h2-console/**"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/weather/**").permitAll()
-                        .requestMatchers(
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/register",
-                                "/api/v1/addresses/**",
-                                "/api/v1/password-recovery/**",
-                                "/api/v1/auth/register-complete"
-                        ).permitAll()
-                        .requestMatchers("/api/v1/citizens/**").hasRole("CITIZEN")
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/internal/**").hasAnyRole("REGULATOR", "SYSTEM")
-                        .anyRequest().authenticated()
-                )
-                .headers(headers ->
-                        headers.frameOptions(frame -> frame.disable())
-                )
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
-                .build();
+                .authorizeHttpRequests(auth -> {
+                    auth.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll();
+                    auth.requestMatchers(
+                            "/swagger-ui/**",
+                            "/v3/api-docs/**",
+                            "/swagger-ui.html"
+                    ).permitAll();
+
+                    if (isDevOrTest) {
+                        auth.requestMatchers("/h2-console/**").permitAll();
+                    }
+
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/weather/**").permitAll();
+                    auth.requestMatchers(
+                            "/api/v1/auth/login",
+                            "/api/v1/auth/register",
+                            "/api/v1/addresses/**",
+                            "/api/v1/password-recovery/**",
+                            "/api/v1/auth/register-complete"
+                    ).permitAll();
+                    auth.requestMatchers("/api/v1/citizens/**").hasRole("CITIZEN");
+                    auth.requestMatchers("/api/v1/admin/**").hasRole("ADMIN");
+                    auth.requestMatchers("/api/v1/internal/**").hasAnyRole("REGULATOR", "SYSTEM");
+                    auth.anyRequest().authenticated();
+                });
+
+        if (isDevOrTest) {
+            http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
+        }
+
+        http.addFilterBefore(
+                jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class
+        );
+
+        return http.build();
     }
 
     @Bean
