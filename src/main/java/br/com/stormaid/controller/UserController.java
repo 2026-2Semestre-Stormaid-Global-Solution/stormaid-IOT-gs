@@ -79,6 +79,7 @@ public class UserController {
         res.setFullName(user.getFullName());
         res.setEmail(user.getEmail());
         res.setPhoneNumber(user.getPhoneNumber());
+        res.setBirthDate(user.getBirthDate());
         res.setRoles(roleNames);
         res.setStatus(user.getStatus() != null ? user.getStatus().name() : null);
         res.setCreatedAt(user.getCreatedAt());
