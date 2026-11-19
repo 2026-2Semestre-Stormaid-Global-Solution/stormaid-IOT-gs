@@ -219,76 +219,112 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 ---
 ## 📌 Endpoints da API
 
-### 🔐 1. Autenticação (`/auth`)
+### 🔐 1. Autenticação (`/api/v1/auth`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
-| `POST` | `/auth/login` | Realiza o login na aplicação e retorna o token JWT | Público |
-| `POST` | `/auth/register` | Registro de novos usuários com role `CITIZEN` | Público |
+| `POST` | `/api/v1/auth/register` | Registo de novos utilizadores com role `CITIZEN` | Público |
+| `POST` | `/api/v1/auth/login` | Realiza o login na aplicação e retorna o token JWT | Público|
+| `GET` | `/api/v1/auth/me` | Retorna os dados do utilizador autenticado| Autenticado|
 
 ---
 
-### 👤 2. Perfil do Cidadão (`/api/v1/citizens`)
+### 👤 2. Utilizadores (`/api/v1/users`)
+
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `GET` | `/api/v1/users/me` | Consulta os dados do utilizador autenticado | Autenticado |
+| `PUT` | `/api/v1/users/me` | Atualiza os dados do utilizador autenticado | Autenticado |
+| `DELETE` | `/api/v1/users/me` | Remove ou desativa o utilizador autenticado | Autenticado |
+| `GET` | `/api/v1/internal/users` | Consulta interna de utilizadores | Interno / Conforme configuração|
+
+---
+
+### 🪪 3. Perfil do Cidadão (`/api/v1/citizens`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
 | `GET` | `/api/v1/citizens/me/profile` | Retorna os dados do perfil do cidadão autenticado | `CITIZEN` |
-| `PUT` | `/api/v1/citizens/me/profile` | Atualiza o perfil do cidadão autenticado | `CITIZEN` |
+| `PUT` | `/api/v1/citizens/me/profile` | Atualiza o perfil do cidadão autenticado | `CITIZEN`|
 
 ---
 
-### 👨‍👩‍👧 3. Dependentes (`/api/v1/dependents`)
+### 👨‍👩‍👧 4. Dependentes (`/api/v1/dependents`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
-| `GET` | `/api/v1/dependents` | Lista os dependentes associados ao cidadão autenticado | `CITIZEN` |
-| `POST` | `/api/v1/dependents` | Cadastra um novo dependente para o cidadão | `CITIZEN` |
-| `GET` | `/api/v1/dependents/{id}` | Busca os detalhes de um dependente por ID | `CITIZEN` |
-| `PUT` | `/api/v1/dependents/{id}` | Atualiza os dados de um dependente | `CITIZEN` |
-| `DELETE` | `/api/v1/dependents/{id}` | Remove o registro de um dependente | `CITIZEN` |
+| `GET` | `/api/v1/dependents` | Lista os dependentes associados ao cidadão autenticado| `CITIZEN`|
+| `POST` | `/api/v1/dependents` | Cadastra um novo dependente para o cidadão| `CITIZEN`|
+| `GET` | `/api/v1/dependents/{id}` | Busca os detalhes de um dependente por ID | `CITIZEN`|
+| `PUT` | `/api/v1/dependents/{id}` | Atualiza os dados de um dependente| `CITIZEN`|
+| `DELETE` | `/api/v1/dependents/{id}` | Remove o registo de um dependente| `CITIZEN`|
 
 ---
 
-### 🚨 4. Ocorrências de Incidentes (`/api/v1/incidents`)
+### 🚨 5. Ocorrências de Incidentes (`/api/v1/incidents`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
-| `GET` | `/api/v1/incidents` | Lista todas as ocorrências do cidadão | `CITIZEN` |
-| `POST` | `/api/v1/incidents` | Registra nova ocorrência (dispara evento `incident.created.v1`) | `CITIZEN` |
-| `GET` | `/api/v1/incidents/{id}` | Consulta detalhes de uma ocorrência específica | `CITIZEN`, `RESPONDER`, `REGULATOR` |
+| `GET` | `/api/v1/incidents` | Lista as ocorrências registadas| Autenticado / Conforme perfil|
+| `POST` | `/api/v1/incidents` | Regista nova ocorrência (dispara evento `incident.created.v1`)| Autenticado / Conforme perfil|
+| `GET` | `/api/v1/incidents/{id}` | Consulta detalhes de uma ocorrência específica| `CITIZEN`, `RESPONDER`, `REGULATOR`|
 
 ---
 
-### 🛡️ 5. Relatos de Risco Comunitário (`/api/v1/community-risks`)
+### 🛡️ 6. Relatos de Risco Comunitário (`/api/v1/community-risks`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
-| `GET` | `/api/v1/community-risks` | Lista os relatos de risco de zeladoria urbana | `CITIZEN`, `REGULATOR` |
-| `POST` | `/api/v1/community-risks` | Cadastra um novo relato de risco comunitário | `CITIZEN` |
-| `GET` | `/api/v1/community-risks/{id}` | Detalhes de um relato de risco específico | `CITIZEN`, `REGULATOR` |
-| `PUT` | `/api/v1/community-risks/{id}` | Atualiza as informações de um relato de risco | `CITIZEN` |
-| `DELETE` | `/api/v1/community-risks/{id}` | Remove um relato de risco cadastrado | `CITIZEN`, `REGULATOR` |
+| `GET` | `/api/v1/community-risks` | Lista os relatos de risco de zeladoria urbana| `CITIZEN`, `REGULATOR`|
+| `POST` | `/api/v1/community-risks` | Cadastra um novo relato de risco comunitário| `CITIZEN`|
+| `GET` | `/api/v1/community-risks/{id}` | Detalhes de um relato de risco específico| `CITIZEN`, `REGULATOR`|
+| `PUT` | `/api/v1/community-risks/{id}` | Atualiza as informações de um relato de risco| `CITIZEN`|
+| `DELETE` | `/api/v1/community-risks/{id}` | Remove um relato de risco cadastrado| `CITIZEN`, `REGULATOR`|
 
 ---
 
-### 🚑 6. Perfil do Socorrista (`/api/v1/responders`)
+### 📍 7. Endereços / CEP (`/api/v1/addresses`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
-| `GET` | `/api/v1/responders/me/profile` | Retorna o perfil do socorrista autenticado | `RESPONDER` |
-| `GET` | `/api/v1/internal/responders` | Lista socorristas cadastrados | `REGULATOR` |
-| `GET` | `/api/v1/internal/responders/{id}` | Busca socorrista por ID | `REGULATOR` |
-| `PATCH` | `/api/v1/internal/responders/{id}/authorization` | Atualiza status de verificação/credenciamento | `REGULATOR` |
-| `GET` | `/api/v1/internal/{userId}/eligibility` | Consulta elegibilidade institucional do socorrista | `REGULATOR`, `ADMIN` |
+| `GET` | `/api/v1/addresses/cep/{cep}` | Consulta endereço por CEP| Autenticado / Conforme configuração |
 
 ---
-### ⚙️ 7. Administração do Sistema (`/api/v1/admin`)
+
+### 🔑 8. Recuperação de Senha (`/api/v1/password-recovery`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
-| `GET` | `/api/v1/admin/users` | Lista todos os utilizadores cadastrados no sistema | `ADMIN` |
-| `DELETE` | `/api/v1/admin/users/{id}` | Remove ou desativa um utilizador | `ADMIN` |
-| `GET` | `/api/v1/admin/audit-logs` | Consulta logs administrativos e de auditoria | `ADMIN` |
+| `POST` | `/api/v1/password-recovery/request` | Solicita recuperação de senha e envia código por e-mail (SMTP) | Público|
+| `POST` | `/api/v1/password-recovery/verify` | Verifica o código de recuperação de senha| Público|
+| `POST` | `/api/v1/password-recovery/reset` | Redefine a senha do utilizador| Público |
+
+---
+
+### 🚑 9. Socorristas e Credenciamento Interno (`/api/v1/responders` e `/api/v1/internal`)
+
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `GET` | `/api/v1/responders/me/profile` | Retorna o perfil do socorrista autenticado| `RESPONDER`|
+| `GET` | `/api/v1/internal` | Consulta interna de socorristas | `REGULATOR` / Interno|
+| `PATCH` | `/api/v1/internal/{id}/authorization` | Atualiza status de verificação/credenciamento| `REGULATOR`|
+| `GET` | `/api/v1/internal/{userId}/eligibility` | Consulta elegibilidade institucional do socorrista | `REGULATOR`, `ADMIN`|
+
+---
+
+### 🔗 10. Integração Interna — Incidentes (`.NET`)
+
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `GET` | `/api/v1/internal/incidents/{id}/regulation-view` | Obtém visão de regulação do incidente para integração com .NET | Interno / Conforme configuração |
+
+---
+
+### ⚙️ 11. Administração do Sistema (`/api/v1/admin`)
+
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|-----------|--------|
+| `POST` | `/api/v1/admin/regulators` | Cadastra ou promove reguladores no sistema| `ADMIN` |
 ---
 
 ## 📸 Evidências e Testes da Aplicação 
