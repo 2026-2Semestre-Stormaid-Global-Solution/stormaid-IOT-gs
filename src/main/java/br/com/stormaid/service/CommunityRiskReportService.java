@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 @Service
 public class CommunityRiskReportService {
@@ -25,11 +24,12 @@ public class CommunityRiskReportService {
 
     @Transactional
     public CommunityRiskReport createRiskReport(User requester, CommunityRiskReportRequest request) {
-        CommunityRiskReport riskReport = new CommunityRiskReport();
+        validateLocation(request.getLatitude(), request.getLongitude(), request.getAddressText(), request.getReferencePoint());
 
+        CommunityRiskReport riskReport = new CommunityRiskReport();
         riskReport.setRequester(requester);
         riskReport.setCategory(request.getCategory());
-        riskReport.setDescription(request.getDescription());
+        riskReport.setDescription(request.getDescription().trim());
         riskReport.setLocationSource(request.getLocationSource());
 
         if (request.getLatitude() != null) {
@@ -39,8 +39,8 @@ public class CommunityRiskReportService {
             riskReport.setLongitude(BigDecimal.valueOf(request.getLongitude()));
         }
 
-        riskReport.setAddressText(request.getAddressText());
-        riskReport.setReferencePoint(request.getReferencePoint());
+        riskReport.setAddressText(request.getAddressText() != null ? request.getAddressText().trim() : null);
+        riskReport.setReferencePoint(request.getReferencePoint() != null ? request.getReferencePoint().trim() : null);
         riskReport.setStatus(CommunityRiskStatus.REPORTED);
 
         return riskReportRepository.save(riskReport);
@@ -66,11 +66,22 @@ public class CommunityRiskReportService {
     public CommunityRiskReport updateRiskReport(Long id, User requester, CommunityRiskReportRequest request) {
         CommunityRiskReport report = findByIdAndRequester(id, requester);
 
+        Double effectiveLat = request.getLatitude() != null
+                ? request.getLatitude()
+                : (report.getLatitude() != null ? report.getLatitude().doubleValue() : null);
+        Double effectiveLng = request.getLongitude() != null
+                ? request.getLongitude()
+                : (report.getLongitude() != null ? report.getLongitude().doubleValue() : null);
+        String effectiveAddress = request.getAddressText() != null ? request.getAddressText() : report.getAddressText();
+        String effectiveReference = request.getReferencePoint() != null ? request.getReferencePoint() : report.getReferencePoint();
+
+        validateLocation(effectiveLat, effectiveLng, effectiveAddress, effectiveReference);
+
         if (request.getCategory() != null) {
             report.setCategory(request.getCategory());
         }
-        if (request.getDescription() != null) {
-            report.setDescription(request.getDescription());
+        if (request.getDescription() != null && !request.getDescription().isBlank()) {
+            report.setDescription(request.getDescription().trim());
         }
         if (request.getLocationSource() != null) {
             report.setLocationSource(request.getLocationSource());
@@ -82,13 +93,26 @@ public class CommunityRiskReportService {
             report.setLongitude(BigDecimal.valueOf(request.getLongitude()));
         }
         if (request.getAddressText() != null) {
-            report.setAddressText(request.getAddressText());
+            report.setAddressText(request.getAddressText().trim());
         }
         if (request.getReferencePoint() != null) {
-            report.setReferencePoint(request.getReferencePoint());
+            report.setReferencePoint(request.getReferencePoint().trim());
         }
 
-
         return riskReportRepository.save(report);
+    }
+
+    private void validateLocation(Double latitude, Double longitude, String addressText, String referencePoint) {
+        boolean hasCoordinates = latitude != null && longitude != null;
+        boolean hasPartialCoordinates = (latitude != null) ^ (longitude != null);
+        boolean hasAddress = (addressText != null && !addressText.isBlank())
+                || (referencePoint != null && !referencePoint.isBlank());
+
+        if (hasPartialCoordinates) {
+            throw new IllegalArgumentException("Informe latitude e longitude juntas");
+        }
+        if (!hasCoordinates && !hasAddress) {
+            throw new IllegalArgumentException("Informe coordenadas (latitude e longitude) ou endereço/ponto de referência");
+        }
     }
 }
