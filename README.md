@@ -1,29 +1,14 @@
-# 🚨 StormAid API
+# 🚨 StormAid — IoT & IA (Assistente de Contextualização de Ocorrências)
 
-O **StormAid** é uma plataforma inteligente de gestão de emergências, zeladoria comunitária e resposta a catástrofes. A API integra cidadãos, dependentes e socorristas/reguladores institucionais através de uma arquitetura robusta em Spring Boot com segurança JWT, persistência em Oracle Database, mensageria assíncrona com RabbitMQ e inteligência artificial com Spring AI (RAG).
+O **StormAid** é uma plataforma inteligente de gestão de emergências, zeladoria comunitária e resposta a catástrofes. Nesta frente (**IoT & IA**), a solução integra canais de captura (`TEXT_INPUT`, `VOICE_AUDIO` e `SOS_SILENT` a partir do Mobile Citizen em React Native), processamento assíncrono via **RabbitMQ** e o **Assistente de Contextualização de Ocorrências** com **Spring AI + RAG** integrado ao backend **Java / Spring Boot** e à operação em **.NET**.
 
 ---
 
-# 🚀 Swagger UI & Consoles
+## 🚀 Swagger UI & Consoles
 
 Acesse a documentação interativa e realize testes diretamente pelo navegador:
 
-```bash
-https://stormaid-java-gs.onrender.com/swagger-ui/index.html
-```
-```bash
-http://localhost:8080/swagger-ui/index.html
-```
-```bash
-http://localhost:8080
-```
----
-
-# 🔗 Link YouTube (Pitch)
-
-```bash
-LINK YOUTUBE
-```
+- Produção / Deploy: `https://stormaid-java-gs.onrender.com/swagger-ui/index.html`
 ---
 
 ## 👥 Integrantes do Grupo
@@ -62,74 +47,69 @@ LINK YOUTUBE
 
 ---
 
-## ⚙️ Tecnologias e Configurações
-### Tecnologias Utilizadas
-- **Java 17 / 21** & **Spring Boot 3.2.5**
-- **Spring AI (Integração com LLM e RAG para análise de incidentes)**
-- **Spring Security** com **JWT (JSON Web Token)**
-- **Oracle Database** (Ambiente Principal) & **H2 Database** (Ambiente de Testes)
-- **Flyway Migration** (Gerenciamento de Schemas SQL)
-- **RabbitMQ** (Mensageria para criação e processamento assíncrono de incidentes)
-- **JUnit 5 / MockMvc** (Testes de Integração)
+## 🎯 Objetivo da IA e Responsabilidades no Ecossistema
+
+A funcionalidade de IA atua como **Assistente de Contextualização de Ocorrências**: transforma relatos de emergência em resumos objetivos e estruturados para apoiar a leitura do `REGULATOR`, recuperando trechos de uma base documental confiável via **Retrieval-Augmented Generation (RAG)**.
+
+### O que a IA faz vs. O que a IA NÃO faz
+
+- **Faz**: interpreta chamados por texto (`TEXT_INPUT`) e, após transcrição (STT), por voz (`VOICE_AUDIO`); identifica apenas fatos expressamente relatados (ex.: *"água entrando na residência"*, *"há pessoas ilhadas"*); explicita informações ausentes ou incertas sem inventá-las; recupera trechos de documentos selecionados sobre enchentes, alagamentos, deslizamentos e desastres climáticos e gera resumo estruturado com referências.
+- **Não faz**: aprova ou rejeita solicitações; define gravidade clínica automaticamente; atribui viaturas, equipes, rotas ou prioridades operacionais; substitui o `REGULATOR`; promete atendimento; cria alertas meteorológicos em tempo real; nem inventa identificação, endereço, diagnóstico ou número de vítimas. O uso de RAG não elimina totalmente alucinações e exige validação adicional.
+
+### Papéis no Ecossistema
+
+- **Mobile Citizen (React Native)**: coleta texto, grava áudio com permissão explícita para microfone, envia ocorrências ao Java e exibe confirmação de registro (não executa embeddings, não define prioridade nem cria análises no backend).
+- **Java / Spring Boot**: valida e persiste `IncidentReport`, executa STT (quando aplicável), roda **Spring AI + RAG**, grava `IncidentAiAnalysis` (`TB_STORMAID_INCIDENT_AI_ANALYSIS`) e publica eventos no broker (não cria `IncidentDispatch`, `RegulationDecision` nem seleciona viatura).
+- **Base de Conhecimento RAG**: armazena conteúdos documentais indexados e metadados de proveniência (`documentId`, `chunkId`, `sourceUrl`, `section`) — não contém prontuários nem cadastros pessoais como corpus público.
+- **RabbitMQ (`stormaid.events`)**: entrega eventos de ocorrência e disponibilização de análise a filas distintas com controle de idempotência (`eventId`), sem substituir o banco de dados nem transportar dados sensíveis desnecessários.
+- **.NET / Regulator**: recebe projeção do chamado, consulta análise no Java por canal seguro e conduz a decisão de regulação/despacho (não recalcula RAG, não armazena senha nem assume propriedade de `IncidentAiAnalysis`).
+- **Mobile Responder**: exibe despachos da `.NET` e dados essenciais autorizados, incluindo resumo quando necessário, sem consultas globais à base de relatos nem acesso a dados de outros atendimentos.
 
 ---
 
-## 🤖 Declaração de Uso de Inteligência Artificial (Spring AI & RAG)
+## 📡 Canais de Entrada e Fluxos Assíncronos
 
-- **Ferramentas Utilizadas**: Spring AI integrado com modelos OpenAI (LLM e Embeddings) e recuperação de contexto vetorial (RAG).
-- **Fluxo Real de Spring AI / RAG**: Quando uma ocorrência é criada, o evento é publicado no RabbitMQ (`incident.ai.queue`). O consumidor aciona o `RagAnalysisService`, que consulta a base de conhecimento do sistema para recuperar contexto relevante e gera uma análise automatizada de triagem e risco persistida na ocorrência.
-- **Transcrição de Áudio (Simulada vs. Real)**: O sistema suporta rotinas assíncronas para processamento de áudios de emergência utilizando atualmente uma **transcrição simulada** (baseada em metadados/chaves de teste pré-definidos para demonstração académica), diferindo de uma **transcrição real** via APIs de Speech-to-Text (como Whisper) em tempo real.
-- **Limitações**: A análise depende da disponibilidade e quota da API externa da OpenAI e do contexto previamente indexado na base de conhecimento; em caso de falha na API externa, o sistema aplica fallback sem bloquear o registo da ocorrência.
+- **`TEXT_INPUT`**:
+  1. Cidadão envia `POST /api/v1/incidents` com `channelType=TEXT_INPUT`, `textDescription`, categoria e localização.
+  2. Java valida, registra `IncidentReport` com `publicStatus=RECEIVED` e retorna `201 Created`.
+  3. Após o *commit*, o evento `incident.created.v1` fica disponível para a `.NET` e para o consumidor de IA.
+  4. O consumidor Java busca o chamado no próprio banco por `incidentId`, executa o RAG e persiste `IncidentAiAnalysis` (`COMPLETED`, `NO_SOURCES` ou `FAILED`).
+  5. Quando concluída com material válido, o Java publica `incident.ai.completed.v1` e a `.NET` apresenta o resultado após consulta interna autorizada.
+- **`VOICE_AUDIO`**:
+  1. Mobile grava áudio com permissão explícita e envia `multipart/form-data` para `POST /api/v1/incidents/voice` com `metadata` (JSON) e `audio` (arquivo).
+  2. Java valida tipo/tamanho, armazena a mídia em repositório privado/interno e persiste primeiro o chamado (`201 Created`, `publicStatus=RECEIVED`, `transcriptionStatus=PENDING`).
+  3. Trabalhador assíncrono executa Speech-to-Text (STT), atualiza `audioTranscription` e `transcriptionStatus` (`COMPLETED` ou `FAILED`) e, se houver transcrição válida, executa o RAG sobre o texto.
+  4. Em falha de STT (`transcriptionStatus=FAILED`), o chamado permanece recebido e visível na `.NET` com categoria e localização originais.
+- **`SOS_SILENT`**: registra o chamado imediatamente com `channelType=SOS_SILENT`, categoria e localização, sem inventar descrição nem bloquear o atendimento; no MVP pode não gerar `IncidentAiAnalysis` quando não há texto.
+- **Tempo de Paz (`CommunityRiskReport`)**: fluxo convencional de zeladoria urbana na API Java, sem RAG no MVP.
 
----
+### Mensageria (Exchange `stormaid.events` — `topic`, durável)
 
-## 📊 Arquitetura e Modelo de Dados (Diagrama ER)
-
-Abaixo está representado o diagrama de entidades e relacionamentos (ER) da base de dados do StormAid, mapeando utilizadores, perfis, dependentes, ocorrências e análises de IA:
-
-```mermaid
-erDiagram
-USER ||--o{ USER_ROLE : has
-ROLE ||--o{ USER_ROLE : grants
-USER ||--o| CITIZEN_PROFILE : has_citizen_profile
-USER ||--o| RESPONDER_PROFILE : has_responder_profile
-USER ||--o{ DEPENDENT : manages
-USER ||--o{ INCIDENT_REPORT : submits
-DEPENDENT o|--o{ INCIDENT_REPORT : may_be_subject
-INCIDENT_REPORT ||--o{ INCIDENT_AI_ANALYSIS : receives
-USER ||--o{ COMMUNITY_RISK_REPORT : submits
-USER o|--o{ RESPONDER_PROFILE : authorizes
-```
----
-
-## 🔐 Roles e Perfis de Acesso (Os Quatro Perfis)
-
-O sistema utiliza quatro perfis (roles) de autorização distintos:
-
-1. `CITIZEN`: Cidadão comum com permissão para gerenciar seu próprio perfil, cadastrar dependentes, registrar ocorrências de incidentes e relatos de riscos comunitários.
-2. `RESPONDER`: Socorrista institucional responsável pelo atendimento de emergências no local. O **cadastro institucional** do socorrista é submetido no sistema e permanece pendente de validação até ser analisado e aprovado por um `REGULATOR` através do fluxo interno de credenciamento.
-3. `REGULATOR`: Agente regulador encarregado da triagem, verificação de credenciais institucionais, aprovação/autorização de socorristas (`RESPONDER`) e gestão estratégica de equipes.
-4. `ADMIN`: Administrador global do sistema, com permissão para gestão avançada de utilizadores, controlo de acessos e auditoria administrativa.
+| Routing Key | Produtor | Fila / Consumidor | Finalidade |
+| :--- | :--- | :--- | :--- |
+| `incident.created.v1` | Java | `stormaid.dotnet.incident-created` | Criar `IncidentReference` na `.NET` |
+| `incident.created.v1` | Java | `stormaid.java.ai-processor` | Iniciar análise (ou transcrição) assíncrona |
+| `incident.ai.completed.v1` | Java | `stormaid.dotnet.ai-completed` | Notificar análise consultável (deduplicada por `eventId` via `ProcessedIntegrationEvent`) |
+| `incident.status.changed.v1` | `.NET` | `stormaid.java.incident-status` | Atualizar estado público no Java com validação de versão (`version > statusVersion`) |
 
 ---
 
-## 🛠️ Configuração de Banco de Dados (Oracle & Flyway) e JWT
+## 🗄️ Modelo de Dados (Reutilização no Java / Oracle)
 
-### 1. Migrações de Banco de Dados (Flyway)
-As migrações SQL são executadas automaticamente na inicialização da aplicação em ambiente de produção/desenvolvimento Oracle:
-- `V1__create_stormaid_schema.sql`: Criação das tabelas base do esquema do StormAid.
-- `V2__seed_roles.sql`: Carga inicial dos perfis (roles) do sistema.
-- `V3__create_responder_profile.sql`: Criação da estrutura de perfil de socorrista (RESPONDER).
-- `V4__alter_role_constraint.sql`: Atualização de restrições (constraints) de perfis.
-- `V5__create_password_reset_table.sql`: Criação da tabela de códigos de recuperação de senha.
-- `V6__add_attempts_to_password_reset.sql`: Adição do controle de tentativas na tabela de recuperação de senha.
-- `V7__add_cpf_and_birth_date_to_user.sql`: Adição dos campos de CPF e data de nascimento na tabela de usuários.
-- `V8__add_accessibility_fields_to_citizen_profile.sql`: Adição de campos de acessibilidade no perfil do cidadão.
-- `V9__add_accessibility_fields_to_dependent.sql`: Adição de campos de acessibilidade nos dependentes.
-- `V10__add_token_version_to_user.sql`: Adição da coluna de versionamento de token (TOKEN_VERSION) no usuário.
+- **Fonte do relato (`IncidentReport` / `TB_STORMAID_INCIDENT_REPORT`)**: utiliza campos como `id`, `channelType`, `emergencyCategory`, `textDescription`, `audioTranscription`, `transcriptionStatus`, `audioStorageKey`, `publicStatus`, `recipientType`, `dependent` e localização já registrada (coordenadas/endereço não devem ser inventados ou substituídos pelo LLM).
+- **Saída da IA (`IncidentAiAnalysis` / `TB_STORMAID_INCIDENT_AI_ANALYSIS`)**: relacionamento `1:N` a partir de `IncidentReport` para manter histórico auditável de reprocessamentos, com `id`, `incident`, `status` (`PENDING`, `PROCESSING`, `COMPLETED`, `NO_SOURCES`, `FAILED`), `summary`, `extractedInformationJson` (`CLOB`), `sourceReferencesJson` (`CLOB`), `modelName`, `errorCode`, `createdAt` e `completedAt`.
 
-### 2. Variáveis de Ambiente
-Configure as seguintes variáveis no seu ambiente ou no `application.properties`:
+---
+
+## ⚙️ Requisitos, Variáveis de Ambiente e Execução
+
+### Pré-requisitos
+
+- **Java 17 / 21** e **Maven Wrapper (`./mvnw` / `.\mvnw.cmd`)**
+- **Oracle Database** (com **Flyway**) e **RabbitMQ**
+- Provedor compatível com **Spring AI** (`ChatModel` / `ChatClient`, `EmbeddingModel`, `VectorStore` e, quando aplicável, modelo/serviço de transcrição STT)
+
+### Variáveis de Ambiente (Exemplo — nunca comitar chaves reais)
 
 ```properties
 # Base de Dados Oracle
@@ -148,8 +128,9 @@ RABBITMQ_VIRTUAL_HOST=/
 PORT=8080
 JWT_SECRET=sua_chave_jwt_super_segura_aqui
 
-# Inteligência Artificial (Spring AI / OpenAI)
-API_KEY=sua_chave_api_openai_aqui
+# Inteligência Artificial (Spring AI)
+SPRING_AI_OPENAI_API_KEY=sua_chave_api_ia_aqui
+API_KEY=sua_chave_api_ia_aqui
 
 # E-mail (SMTP)
 MAIL_HOST=smtp.gmail.com
@@ -157,275 +138,68 @@ MAIL_PORT=587
 MAIL_USERNAME=seu_email@exemplo.com
 MAIL_PASSWORD=sua_senha_ou_app_password
 ```
----
 
-## 📬 Mensageria Assíncrona (RabbitMQ)
+### Inicialização e Índice / Reindexação do Corpus RAG
 
-A API do StormAid publica eventos assíncronos críticos:
-- Exchange: stormaid.incidents
-- Fila de Incidentes: incident.created.v1
-- Fila de IA (RAG): incident.ai.queue
-- Atualização de Status (via .NET): consumo idempotente com controlo de versão de evento (IncidentStatusChangedConsumer).
----
+1. Suba os serviços de infraestrutura (**Oracle** e **RabbitMQ**):
 
-## 🧪 Execução de Testes Automatizados
-
-Os testes unitários utilizam JUnit 5 + Mockito, e os testes de integração utilizam MockMvc com banco isolado H2 em memória (src/test/resources/application.properties).
-
-### Suíte de Testes Coberta
-
-- AuthControllerTest: Autenticação, registo e bloqueio de acesso sem token JWT (403 Forbidden).
-- CitizenRegistrationServiceTest: Validação de regras de cadastro completo do cidadão.
-- CitizenProfileServiceTest: Consulta de perfil padrão, atualização de endereço, vulnerabilidade (MobilityStatus) e contacto de emergência.
-- DependentServiceTest: Criação de dependente com herança de endereço do responsável, validação de parentesco (RelationshipType), isolamento entre responsáveis (403) e remoção lógica (soft delete).
-- PasswordRecoveryServiceTest: Envio de código com rate limit, invalidação de códigos anteriores, verificação de código com geração de tempToken, bloqueio por tentativas falhas e redefinição de senha com incremento de tokenVersion.
-- IncidentReportServiceTest, IncidentReportControllerTest & IncidentReportControllerRecoveryTest: Regras de negócio de ocorrências, validações e recuperação.
-- IncidentEventPublisherTest & IncidentStatusChangedConsumerTest: Publicação pós-commit no RabbitMQ, idempotência e rejeição de payloads inválidos.
-- AddressServiceTest & AppVersionServiceTest: Consulta de CEP e metadados de versão/build.
-
-### Comandos Maven:
-
-**Executar todos os testes (Windows PowerShell):**
-```powershell
-.\mvnw clean test
-```
-
-**Executar todos os testes (Linux / macOS):**
-```bash
-./mvnw clean test
-```
-
-**Gerar pacote executável (.jar):**
-```bash
-.\mvnw -DskipTests clean package
-```
-
----
-
-## 💻 Como Executar a Aplicação
-
-**Windows:**
-```powershell
-.\mvnw.cmd spring-boot:run
-```
-
-**Linux / macOS:**
-```bash
-./mvnw spring-boot:run
-```
----
-
-### Execução via Docker e Docker Compose
-
-1. **Subir os serviços de infraestrutura (RabbitMQ e Oracle):**
    ```bash
    docker-compose up -d
    ```
 
-2 **Rodar build Docker:**
+2. Mantenha os documentos curados e o manifesto em `src/main/resources/knowledge/` (ex.: `manifest.json`, `flood-guidance.md`, `landslide-guidance.md`) e reconstrua/indexe o `VectorStore` na inicialização ou pela rotina de ingestão configurada no projeto (sem misturar embeddings de modelos/dimensões incompatíveis).
+
+3. Inicie a aplicação Java:
+
    ```bash
-   docker build -t stormaid-api .
+   ./mvnw spring-boot:run
    ```
----
 
-## 🔑 Contas de Teste Pré-Configuradas
-
-Para facilitar a avaliação, a aplicação inicializa automaticamente contas de teste para cada perfil de acesso do sistema:
-
-| Perfil | E-mail de Acesso | Senha | Descrição |
-| :--- | :--- | :--- | :--- |
-| **CITIZEN** | `cidadao@stormaid.example` | `SenhaForte!2026` | Cidadão comum para abertura de incidentes e dependentes |
-| **RESPONDER** | `carlos.socorrista@stormaid.example` | `SenhaForte!2026` | Socorrista institucional de campo |
-| **REGULATOR** | `regulator@stormaid.example` | `SenhaForte!2026` | Agente regulador e gestor de credenciamento |
-| **ADMIN** | `admin@stormaid.example` | `SenhaForte!2026` | Administrador global do sistema |
-
----
-## 📌 Endpoints da API
-
-### 🔐 1. Autenticação (`/api/v1/auth`)
-
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `POST` | `/api/v1/auth/register` | Registo básico de novos utilizadores com role `CITIZEN` | Público |
-| `POST` | `/api/v1/auth/register-complete` | Cadastro completo do cidadão (dados pessoais, endereço, vulnerabilidade e contacto de emergência)| Público |
-| `POST` | `/api/v1/auth/login` | Realiza o login na aplicação e retorna o token JWT | Público|
-| `GET` | `/api/v1/auth/me` | Retorna os dados do utilizador autenticado| Autenticado|
-
-
-#### Exemplo de Payload JSON — POST /api/v1/auth/register-complete
-```JSON
-{
-"fullName": "Maria Silva",
-"email": "maria.silva@stormaid.example",
-"cpf": "12345678901",
-"birthDate": "1990-05-15",
-"password": "SenhaForte!2026",
-"phoneNumber": "11999999999",
-"address": {
-"postalCode": "01310-100",
-"street": "Avenida Paulista",
-"number": "1000",
-"complement": "Apto 42",
-"neighborhood": "Bela Vista",
-"city": "São Paulo",
-"state": "SP"
-},
-"vulnerability": {
-"mobilityStatus": "ASSISTED",
-"hasVisualImpairment": false,
-"hasHearingImpairment": false,
-"equipmentDescription": "Bengala de apoio",
-"accessibilityNotes": "Necessita de apoio na evacuação"
-},
-"emergencyContact": {
-"name": "Ana Paula",
-"phoneNumber": "11988887777",
-"relationship": "Irmã"
-}
-}
-```
----
-
-### 👤 2. Utilizadores (`/api/v1/users`)
-
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `GET` | `/api/v1/users/me` | Consulta os dados do utilizador autenticado | Autenticado |
-| `PUT` | `/api/v1/users/me` | Atualiza os dados cadastrais básicos do utilizador autenticado | Autenticado |
-| `DELETE` | `/api/v1/users/me` | Remove ou desativa o utilizador autenticado | Autenticado |
-| `GET` | `/api/v1/internal/users` | Consulta interna de utilizadores | Interno / Conforme configuração|
+   *(No Windows PowerShell: `.\mvnw.cmd spring-boot:run`)*
 
 ---
 
-### 🪪 3. Perfil do Cidadão (`/api/v1/citizens`)
+## 📌 Endpoints Principais do Fluxo
 
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `GET` | `/api/v1/citizens/me/profile` | Retorna os dados do perfil do cidadão autenticado | `CITIZEN` |
-| `PUT` | `/api/v1/citizens/me/profile` | Atualiza endereço, condições de vulnerabilidade (AUTONOMOUS, ASSISTED, WHEELCHAIR_USER, BEDRIDDEN, UNKNOWN) e contacto de emergência | `CITIZEN`|
-
----
-
-### 👨‍👩‍👧 4. Dependentes (`/api/v1/dependents`)
-
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `GET` | `/api/v1/dependents` | Lista os dependentes associados ao cidadão autenticado| `CITIZEN`|
-| `POST` | `/api/v1/dependents` | Cadastra um novo dependente para o cidadão| `CITIZEN`|
-| `GET` | `/api/v1/dependents/{id}` | Busca os detalhes de um dependente por ID | `CITIZEN`|
-| `PUT` | `/api/v1/dependents/{id}` | Atualiza os dados de um dependente| `CITIZEN`|
-| `DELETE` | `/api/v1/dependents/{id}` | Remove o registo de um dependente| `CITIZEN`|
+| Método | Endpoint | Finalidade |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/incidents` | Cria ocorrência (`TEXT_INPUT` ou `SOS_SILENT`) e publica `incident.created.v1` |
+| `POST` | `/api/v1/incidents/voice` | Cria ocorrência de áudio via `multipart/form-data` (`metadata` + `audio`) |
+| `GET` | `/api/v1/incidents/{id}` | Consulta ocorrência própria e estado operacional |
+| `GET` | `/api/v1/incidents?page=0&size=10` | Lista histórico paginado do solicitante |
+| `GET` | `/api/v1/internal/incidents/{id}/ai-analysis` | Consulta interna autenticada da análise (`IncidentAiAnalysisResponse`) por serviço autorizado |
 
 ---
 
-### 🚨 5. Ocorrências de Incidentes (`/api/v1/incidents`)
+## 🛡️ Segurança, Resiliência, Falhas e Limitações
 
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `GET` | `/api/v1/incidents` | Lista as ocorrências registadas| Autenticado / Conforme perfil|
-| `POST` | `/api/v1/incidents` | Regista nova ocorrência (dispara evento `incident.created.v1`)| Autenticado / Conforme perfil|
-| `GET` | `/api/v1/incidents/{id}` | Consulta detalhes de uma ocorrência específica| `CITIZEN`, `RESPONDER`, `REGULATOR`|
-
----
-
-### 🛡️ 6. Relatos de Risco Comunitário (`/api/v1/community-risks`)
-
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `GET` | `/api/v1/community-risks` | Lista os relatos de risco de zeladoria urbana| `CITIZEN`, `REGULATOR`|
-| `POST` | `/api/v1/community-risks` | Cadastra um novo relato de risco comunitário| `CITIZEN`|
-| `GET` | `/api/v1/community-risks/{id}` | Detalhes de um relato de risco específico| `CITIZEN`, `REGULATOR`|
-| `PUT` | `/api/v1/community-risks/{id}` | Atualiza as informações de um relato de risco| `CITIZEN`|
-| `DELETE` | `/api/v1/community-risks/{id}` | Remove um relato de risco cadastrado| `CITIZEN`, `REGULATOR`|
+- **Resiliência e Falhas Externas (sem bloquear o chamado)**:
+  - **Falha/Quota da IA (`HTTP 429` / timeout / JSON inválido)**: persiste `FAILED` (ou `NO_SOURCES` quando não há trechos relevantes), aplica *fallback* controlado e **não** bloqueia o registo da ocorrência nem o atendimento pela central humana.
+  - **Falha de conexão com RabbitMQ ou STT**: preserva o chamado registrado; `transcriptionStatus=FAILED` mantém o registro visível com categoria e localização originais.
+- **Segurança e Privacidade**:
+  - Endpoint interno protegido por autenticação/autorização de serviço e escopo mínimo (bloqueando acesso indevido de terceiros).
+  - Relatos e documentos recuperados são tratados como dados não confiáveis (defesa contra *prompt injection*; saída do LLM nunca altera `publicStatus`, `RegulationDecision` ou despachos).
+  - Nunca gravar chaves reais, tokens, áudios privados ou dados sensíveis em logs ou arquivos versionados no GitHub.
+- **Limitações Conhecidas**:
+  - RAG não elimina totalmente alucinações nem substitui validação humana; alertas meteorológicos dinâmicos em tempo real (como avisos do INMET) não são gerados por base documental estática.
+  - Se o canal de voz (`VOICE_AUDIO`) ainda não contar com STT real ativo no ambiente de demonstração, essa limitação deve ser declarada explicitamente sem simular transcrição real.
 
 ---
 
-### 📍 7. Endereços / CEP (`/api/v1/addresses`)
+## 🧪 Testes e Métricas de Avaliação
 
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `GET` | `/api/v1/addresses/cep/{cep}` | Consulta endereço por CEP| Autenticado / Conforme configuração |
+- **Execução de testes**:
 
----
+  ```bash
+  ./mvnw clean test
+  ```
 
-### 🌦️8. Meteorologia (`/api/v1/weather`)
-
-| Método | Endpoint | Descrição | Acesso    |
-|--------|----------|-----------|-----------|
-| `GET` | `/api/v1/weather` | Consulta condições meteorológicas atuais e previsão por coordenadas/localidade | Autenticado / Público |
+- **Casos de teste e métricas**: planejados com entradas sintéticas e gabaritos (ex.: `tests/ai/test-cases.csv`), medindo fidelidade factual, cobertura de fatos relatados, validade das referências recuperadas, abstenção adequada (`NO_SOURCES`) e tempo de análise (`completedAt - createdAt`). Registre os resultados reais medidos em `docs/AI_EVALUATION.md` (sem preencher métricas antecipadamente).
 
 ---
 
-### 🔑 9. Recuperação de Senha (`/api/v1/password-recovery`)
+## 📚 Fontes Documentais de Referência (Corpus RAG)
 
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `POST` | `/api/v1/password-recovery/request` | Solicita recuperação de senha e envia código por e-mail (SMTP) | Público|
-| `POST` | `/api/v1/password-recovery/verify` | Verifica o código de recuperação de senha| Público|
-| `POST` | `/api/v1/password-recovery/reset` | Redefine a senha do utilizador| Público |
-
----
-
-### 🚑 10. Socorristas e Credenciamento Interno (`/api/v1/responders` e `/api/v1/internal`)
-
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `GET` | `/api/v1/responders/me/profile` | Retorna o perfil do socorrista autenticado| `RESPONDER`|
-| `GET` | `/api/v1/internal` | Consulta interna de socorristas | `REGULATOR` / Interno|
-| `PATCH` | `/api/v1/internal/{id}/authorization` | Atualiza status de verificação/credenciamento| `REGULATOR`|
-| `GET` | `/api/v1/internal/{userId}/eligibility` | Consulta elegibilidade institucional do socorrista | `REGULATOR`, `ADMIN`|
-
----
-
-### 🔗 11. Integração Interna — Incidentes (`.NET`)
-
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `GET` | `/api/v1/internal/incidents/{id}/regulation-view` | Obtém visão de regulação do incidente para integração com .NET | Interno / Conforme configuração |
-
----
-
-### ℹ️ 12. Versão e Build da Aplicação (`/api/v1/version / Actuator`)
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|----------|--------|
-| `GET`  | `/api/v1/version` | Retorna informações de versão da aplicação, ambiente e hash do commit Git| `Público / Conforme configuração` |
-
----
-
-### ⚙️ 13. Administração do Sistema (`/api/v1/admin`)
-
-| Método | Endpoint | Descrição | Acesso |
-|--------|----------|-----------|--------|
-| `POST` | `/api/v1/admin/regulators` | Cadastra ou promove reguladores no sistema| `ADMIN` |
-
----
-
-## 📸 Evidências e Testes da Aplicação 
-
-Esta secção documenta as evidências de execução, testes funcionais, validação de regras de negócio e a robustez de segurança implementada na API do StormAid.
-
-### 1. Documentação Interativa (Swagger UI)
-Abaixo está a interface geral do Swagger UI a expor todos os controladores da API (autenticação, incidentes, dependentes, perfis e relatórios comunitários):
-<p align="center">
-  <img src="docs/images/swagger-ui.png" width="300" alt="Swagger UI - Visão Geral">
-</p>
-
-### 2. Testes de Regras de Negócio e Validação de Exceções (`400 Bad Request`)
-O endpoint de registo de incidentes valida rigorosamente os dados enviados no payload (como a existência de dependentes e parâmetros obrigatórios), retornando um erro limpo de Bad Request quando há inconsistências de negócio, antes de prosseguir com o fluxo de mensageria e IA:
-<p align="center">
-  <img src="docs/images/bad-request-test.png" width="300" alt="Teste com Erro de Negócio">
-</p>
-
-### 3. Testes de Sucesso e Persistência do Incidente (`200 OK`)
-Após a validação correta dos parâmetros e do envio com o token de autenticação, o endpoint `POST /api/v1/incidents` processa com sucesso o pedido, persistindo o incidente na base de dados e acionando o ecossistema assíncrono:
-<p align="center">
-  <img src="docs/images/success-incident-test.png" width="300" alt="Teste com Sucesso">
-</p>
-
-### 4. Suíte de Testes Automatizados
-* **Ferramenta**: JUnit 5, Mockito e MockMvc (Testes unitários e de integração com H2 em memória).
-* **Status da Execução**: `BUILD SUCCESS` (Garante que a inicialização do contexto Spring Boot, regras de perfil/dependentes/recuperação de senha, mensageria e o bloqueio de acessos não autorizados por JWT funcionam perfeitamente).
-<p align="center">
-  <img src="docs/images/build-success.png" width="300" alt="BUILD SUCCESS">
-</p>
-
+- **Secretaria Nacional de Proteção e Defesa Civil** — *Saiba como agir*: `https://www.gov.br/mdr/pt-br/assuntos/protecao-e-defesa-civil/saiba-como-agir`
+- **Cemaden** — *Movimento de massa*: `https://www.gov.br/cemaden/pt-br/paginas/ameacas-naturais/movimento-de-massa`
+- **Defesa Civil do Paraná** — *Deslizamento*: `https://www.defesacivil.pr.gov.br/Pagina/Deslizamento`
