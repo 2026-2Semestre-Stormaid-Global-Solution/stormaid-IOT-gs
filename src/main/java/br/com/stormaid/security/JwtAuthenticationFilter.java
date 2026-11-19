@@ -1,5 +1,6 @@
 package br.com.stormaid.security;
 
+import br.com.stormaid.entity.User;
 import br.com.stormaid.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -7,7 +8,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -34,9 +34,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null) {
             String login = tokenService.validateToken(token);
             if (login != null && !login.isEmpty()) {
-                UserDetails user = userRepository.findByEmail(login).orElse(null);
+                User user = userRepository.findByEmail(login).orElse(null);
+                Long tokenVersion = tokenService.extractTokenVersion(token);
 
-                if (user != null && user.isEnabled() && user.isAccountNonLocked()) {
+                boolean validVersion = user != null && tokenVersion != null && tokenVersion == user.getTokenVersion();
+
+                if (user != null && validVersion && user.isEnabled() && user.isAccountNonLocked()) {
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

@@ -52,6 +52,10 @@ public class User implements UserDetails {
     @Column(name = "STATUS", nullable = false, length = 20)
     private UserStatus status;
 
+    @Builder.Default
+    @Column(name = "TOKEN_VERSION", nullable = false)
+    private long tokenVersion = 0L;
+
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -77,6 +81,10 @@ public class User implements UserDetails {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now(ZoneOffset.UTC);
+    }
+
+    public void incrementTokenVersion() {
+        this.tokenVersion = this.tokenVersion + 1L;
     }
 
     @Override
