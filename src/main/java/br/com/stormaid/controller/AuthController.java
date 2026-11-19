@@ -1,11 +1,13 @@
 package br.com.stormaid.controller;
 
 import br.com.stormaid.dto.request.LoginRequest;
+import br.com.stormaid.dto.request.RegisterCompleteRequest;
 import br.com.stormaid.dto.request.RegisterRequest;
 import br.com.stormaid.dto.response.LoginResponse;
 import br.com.stormaid.dto.response.UserResponse;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.service.AuthService;
+import br.com.stormaid.service.CitizenRegistrationService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,15 +19,31 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final CitizenRegistrationService citizenRegistrationService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(
+            AuthService authService,
+            CitizenRegistrationService citizenRegistrationService
+    ) {
         this.authService = authService;
+        this.citizenRegistrationService = citizenRegistrationService;
     }
 
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@RequestBody @Valid RegisterRequest request) {
         UserResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/register-complete")
+    public ResponseEntity<LoginResponse> registerComplete(
+            @RequestBody @Valid RegisterCompleteRequest request
+    ) {
+        LoginResponse response = citizenRegistrationService.registerComplete(request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
 
     @PostMapping("/login")
