@@ -106,7 +106,7 @@ public class RagAnalysisService {
             try {
                 rootNode = objectMapper.readTree(cleanedJson);
             } catch (Exception e) {
-                log.error("A resposta do LLM não é um JSON válido: {}", aiResponseContent);
+                log.error("A resposta do LLM não é um JSON válido para o incidente {}: {}", incident.getId(), aiResponseContent);
                 throw new RuntimeException("Resposta do LLM inválida (não é JSON parseável)", e);
             }
 
@@ -138,11 +138,12 @@ public class RagAnalysisService {
             eventPublisher.publishAiCompleted(incident.getId(), analysis.getId(), analysis.getStatus().name());
 
         } catch (Exception e) {
-            log.error("Erro ao executar análise RAG para o incidente: {}", e.getMessage());
+            log.error("Erro ao executar análise RAG para o incidente {}: {}", incident.getId(), e.getMessage());
             analysis.setStatus(AiAnalysisStatus.FAILED);
             analysis.setErrorCode("AI_PROCESSING_ERROR");
             analysis.setCompletedAt(Instant.now());
-            analysis = aiAnalysisRepository.save(analysis);
+            aiAnalysisRepository.save(analysis);
+            throw new RuntimeException("Falha ao executar análise RAG para o incidente " + incident.getId(), e);
         }
 
         return analysis;

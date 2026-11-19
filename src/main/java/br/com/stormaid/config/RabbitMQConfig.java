@@ -13,6 +13,12 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.retry.RejectAndDontRequeueRecoverer;
+import org.springframework.retry.interceptor.RetryInterceptorBuilder;
+import org.springframework.retry.interceptor.RetryOperationsInterceptor;
+
 @Configuration
 public class RabbitMQConfig {
 
@@ -143,5 +149,32 @@ public class RabbitMQConfig {
                 .bind(queue)
                 .to(exchange)
                 .with(AI_DEAD_LETTER_ROUTING_KEY);
+    }
+
+    @Bean
+    public RetryOperationsInterceptor aiConsumerRetryInterceptor() {
+        RejectAndDontRequeueRecoverer recoverer = new RejectAndDontRequeueRecoverer();
+        return RetryInterceptorBuilder.stateless()
+                .maxAttempts(3)
+                .backOffOptions(1000L, 2.0, 5000L)
+                .recoverer((args, cause) -> {
+                    recoverer.recover(null, cause);
+                    return null;
+                })
+                .build();
+    }
+
+    @Bean(name = "aiRabbitListenerContainerFactory")
+    public SimpleRabbitListenerContainerFactory aiRabbitListenerContainerFactory(
+            ConnectionFactory connectionFactory,
+            Jackson2JsonMessageConverter messageConverter,
+            RetryOperationsInterceptor aiConsumerRetryInterceptor
+    ) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(messageConverter);
+        factory.setDefaultRequeueRejected(false);
+        factory.setAdviceChain(aiConsumerRetryInterceptor);
+        return factory;
     }
 }

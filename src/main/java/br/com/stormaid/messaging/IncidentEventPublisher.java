@@ -85,10 +85,9 @@ public class IncidentEventPublisher {
 
                         if (!sent) {
                             logger.error(
-                                    "ERRO CRÍTICO DE RECUPERAÇÃO: Falha definitiva ao publicar incidente incidentId={} (idempotencyKey={}) após {} tentativas. O evento requer reprocessamento operacional.",
-                                    incidentId,
-                                    idempotencyKey,
-                                    maxAttempts
+                                    "ERRO CRÍTICO: Falha definitiva ao enviar evento de IA ao RabbitMQ após {} tentativas. incidentId={} (ocorrência persistida; requer reprocessamento operacional).",
+                                    maxAttempts,
+                                    incidentId
                             );
                         }
                     }
@@ -115,8 +114,8 @@ public class IncidentEventPublisher {
                         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
                             try {
                                 rabbitTemplate.convertAndSend(
-                                        "stormaid.events",
-                                        "incident.created.ai",
+                                        RabbitMQConfig.STATUS_EXCHANGE,
+                                        RabbitMQConfig.INCIDENT_AI_ROUTING_KEY,
                                         aiPayload
                                 );
 

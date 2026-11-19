@@ -31,7 +31,10 @@ public class IncidentAiConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @RabbitListener(queues = "incident.ai.queue")
+    @RabbitListener(
+            queues = br.com.stormaid.config.RabbitMQConfig.INCIDENT_AI_QUEUE,
+            containerFactory = "aiRabbitListenerContainerFactory"
+    )
     public void consumeIncidentCreated(String messageJson) {
         try {
             IncidentEventPayload payload = objectMapper.readValue(messageJson, IncidentEventPayload.class);
@@ -67,4 +70,5 @@ public class IncidentAiConsumer {
         public Long getIncidentId() { return incidentId; }
         public void setIncidentId(Long incidentId) { this.incidentId = incidentId; }
     }
+
 }
