@@ -7,11 +7,13 @@ import br.com.stormaid.entity.User;
 import br.com.stormaid.service.CitizenProfileService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/citizens/me/profile")
+@PreAuthorize("hasRole('CITIZEN')")
 public class CitizenProfileController {
 
     private final CitizenProfileService citizenProfileService;

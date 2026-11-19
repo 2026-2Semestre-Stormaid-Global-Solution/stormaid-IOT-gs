@@ -1,7 +1,12 @@
 package br.com.stormaid.service;
 
+import br.com.stormaid.dto.request.AddressRequestDto;
 import br.com.stormaid.dto.request.CitizenProfileRequest;
+import br.com.stormaid.dto.request.EmergencyContactRequestDto;
+import br.com.stormaid.dto.request.VulnerabilityRequestDto;
 import br.com.stormaid.embeddable.Address;
+import br.com.stormaid.embeddable.EmergencyContact;
+import br.com.stormaid.embeddable.VulnerabilityInfo;
 import br.com.stormaid.entity.CitizenProfile;
 import br.com.stormaid.entity.User;
 import br.com.stormaid.enums.MobilityStatus;
@@ -18,74 +23,144 @@ public class CitizenProfileService {
         this.citizenProfileRepository = citizenProfileRepository;
     }
 
+    @Transactional(readOnly = true)
     public CitizenProfile getProfileByUser(User user) {
         return citizenProfileRepository.findByUser(user)
-                .orElseGet(() -> {
-                    CitizenProfile newProfile = new CitizenProfile();
-                    newProfile.setUser(user);
-
-                    if (newProfile.getVulnerability() == null) {
-                        br.com.stormaid.embeddable.VulnerabilityInfo vulnerability = new br.com.stormaid.embeddable.VulnerabilityInfo();
-                        vulnerability.setMobilityStatus(MobilityStatus.AUTONOMOUS);
-                        vulnerability.setHasVisualImpairment(false);
-                        vulnerability.setHasHearingImpairment(false);
-                        vulnerability.setDependsOnEquipment(false);
-                        newProfile.setVulnerability(vulnerability);
-                    }
-
-                    if (newProfile.getEmergencyContact() == null) {
-                        newProfile.setEmergencyContact(new br.com.stormaid.embeddable.EmergencyContact());
-                    }
-
-                    return citizenProfileRepository.save(newProfile);
-                });
+                .orElseGet(() -> buildDefaultProfile(user));
     }
 
     @Transactional
     public CitizenProfile updateProfile(User user, CitizenProfileRequest request) {
-        CitizenProfile profile = getProfileByUser(user);
+        CitizenProfile profile = citizenProfileRepository.findByUser(user)
+                .orElseGet(() -> buildDefaultProfile(user));
+
+        profile.setUser(user);
 
         if (request.getAddress() != null) {
-            Address address = profile.getAddress() != null ? profile.getAddress() : new Address();
-
-            if (request.getAddress().getPostalCode() != null) {
-                address.setPostalCode(request.getAddress().getPostalCode());
-            }
-            if (request.getAddress().getStreet() != null) {
-                address.setStreet(request.getAddress().getStreet());
-            }
-            if (request.getAddress().getAddressNumber() != null) {
-                address.setNumber(request.getAddress().getAddressNumber());
-            }
-            if (request.getAddress().getComplement() != null) {
-                address.setComplement(request.getAddress().getComplement());
-            }
-            if (request.getAddress().getNeighborhood() != null) {
-                address.setNeighborhood(request.getAddress().getNeighborhood());
-            }
-            if (request.getAddress().getCity() != null) {
-                address.setCity(request.getAddress().getCity());
-            }
-            if (request.getAddress().getState() != null) {
-                address.setState(request.getAddress().getState().toUpperCase());
-            }
-            if (request.getAddress().getReferencePoint() != null) {
-                address.setReferencePoint(request.getAddress().getReferencePoint());
-            }
-
-            profile.setAddress(address);
+            profile.setAddress(mergeAddress(profile.getAddress(), request.getAddress()));
         }
 
         if (request.getVulnerability() != null) {
-            var vulnerabilityInfo = profile.getVulnerability() != null ? profile.getVulnerability() : new br.com.stormaid.embeddable.VulnerabilityInfo();
-            profile.setVulnerability(vulnerabilityInfo);
+            profile.setVulnerability(mergeVulnerability(profile.getVulnerability(), request.getVulnerability()));
+        } else if (profile.getVulnerability() == null) {
+            profile.setVulnerability(defaultVulnerability());
         }
 
         if (request.getEmergencyContact() != null) {
-            var emergencyContact = profile.getEmergencyContact() != null ? profile.getEmergencyContact() : new br.com.stormaid.embeddable.EmergencyContact();
-            profile.setEmergencyContact(emergencyContact);
+            profile.setEmergencyContact(
+                    mergeOrClearEmergencyContact(profile.getEmergencyContact(), request.getEmergencyContact())
+            );
         }
 
         return citizenProfileRepository.save(profile);
+    }
+
+    private CitizenProfile buildDefaultProfile(User user) {
+        CitizenProfile profile = new CitizenProfile();
+        profile.setUser(user);
+        profile.setAddress(new Address());
+        profile.setVulnerability(defaultVulnerability());
+        profile.setEmergencyContact(new EmergencyContact());
+        return profile;
+    }
+
+    private VulnerabilityInfo defaultVulnerability() {
+        VulnerabilityInfo vulnerability = new VulnerabilityInfo();
+        vulnerability.setMobilityStatus(MobilityStatus.AUTONOMOUS);
+        vulnerability.setHasVisualImpairment(false);
+        vulnerability.setHasHearingImpairment(false);
+        vulnerability.setDependsOnEquipment(false);
+        return vulnerability;
+    }
+
+    private Address mergeAddress(Address current, AddressRequestDto req) {
+        Address address = current != null ? current : new Address();
+
+        if (req.getPostalCode() != null) {
+            address.setPostalCode(req.getPostalCode());
+        }
+        if (req.getStreet() != null) {
+            address.setStreet(req.getStreet());
+        }
+        if (req.getAddressNumber() != null) {
+            address.setNumber(req.getAddressNumber());
+        }
+        if (req.getComplement() != null) {
+            address.setComplement(req.getComplement());
+        }
+        if (req.getNeighborhood() != null) {
+            address.setNeighborhood(req.getNeighborhood());
+        }
+        if (req.getCity() != null) {
+            address.setCity(req.getCity());
+        }
+        if (req.getState() != null) {
+            address.setState(req.getState().toUpperCase());
+        }
+        if (req.getReferencePoint() != null) {
+            address.setReferencePoint(req.getReferencePoint());
+        }
+
+        return address;
+    }
+
+    private VulnerabilityInfo mergeVulnerability(VulnerabilityInfo current, VulnerabilityRequestDto req) {
+        VulnerabilityInfo vulnerability = current != null ? current : defaultVulnerability();
+
+        if (req.getMobilityStatus() != null) {
+            vulnerability.setMobilityStatus(req.getMobilityStatus());
+        }
+        if (req.getHasVisualImpairment() != null) {
+            vulnerability.setHasVisualImpairment(req.getHasVisualImpairment());
+        }
+        if (req.getHasHearingImpairment() != null) {
+            vulnerability.setHasHearingImpairment(req.getHasHearingImpairment());
+        }
+        if (req.getDependsOnEquipment() != null) {
+            vulnerability.setDependsOnEquipment(req.getDependsOnEquipment());
+        }
+        if (req.getEquipmentDescription() != null) {
+            vulnerability.setEquipmentDescription(req.getEquipmentDescription().isBlank() ? null : req.getEquipmentDescription());
+        }
+        if (req.getAccessibilityNotes() != null) {
+            vulnerability.setAccessibilityNotes(req.getAccessibilityNotes().isBlank() ? null : req.getAccessibilityNotes());
+        }
+
+        return vulnerability;
+    }
+
+    private EmergencyContact mergeOrClearEmergencyContact(
+            EmergencyContact current,
+            EmergencyContactRequestDto req
+    ) {
+        boolean shouldClearAll = isBlank(req.getName())
+                && isBlank(req.getPhoneNumber())
+                && isBlank(req.getRelationship());
+
+        if (shouldClearAll) {
+            EmergencyContact cleared = new EmergencyContact();
+            cleared.setName(null);
+            cleared.setPhoneNumber(null);
+            cleared.setRelationship(null);
+            return cleared;
+        }
+
+        EmergencyContact contact = current != null ? current : new EmergencyContact();
+
+        if (req.getName() != null) {
+            contact.setName(req.getName().isBlank() ? null : req.getName());
+        }
+        if (req.getPhoneNumber() != null) {
+            contact.setPhoneNumber(req.getPhoneNumber().isBlank() ? null : req.getPhoneNumber());
+        }
+        if (req.getRelationship() != null) {
+            contact.setRelationship(req.getRelationship().isBlank() ? null : req.getRelationship());
+        }
+
+        return contact;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

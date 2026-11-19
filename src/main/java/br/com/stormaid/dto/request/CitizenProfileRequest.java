@@ -11,7 +11,9 @@ public class CitizenProfileRequest {
     @Valid
     private AddressRequestDto address;
 
-    private String vulnerability;
+    @Valid
+    private VulnerabilityRequestDto vulnerability;
 
-    private String emergencyContact;
+    @Valid
+    private EmergencyContactRequestDto emergencyContact;
 }

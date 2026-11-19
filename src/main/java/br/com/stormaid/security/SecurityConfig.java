@@ -52,6 +52,7 @@ public class SecurityConfig {
                                 "/api/v1/addresses/**",
                                 "/api/v1/password-recovery/**"
                         ).permitAll()
+                        .requestMatchers("/api/v1/citizens/**").hasRole("CITIZEN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/internal/**").hasAnyRole("REGULATOR", "SYSTEM")
                         .anyRequest().authenticated()
