@@ -129,9 +129,6 @@ ORACLE_URL=jdbc:oracle:thin:@oracle.fiap.com.br:1521:ORCL
 ORACLE_USER=seu_usuario_rm
 ORACLE_PASSWORD=sua_senha_oracle
 
-# Segurança JWT
-JWT_SECRET=sua_chave_jwt_super_segura_aqui
-
 # Mensageria RabbitMQ
 RABBITMQ_HOST=127.0.0.1
 RABBITMQ_PORT=5672
@@ -139,8 +136,18 @@ RABBITMQ_USERNAME=stormaid
 RABBITMQ_PASSWORD=sua_senha_rabbitmq
 RABBITMQ_VIRTUAL_HOST=/
 
+# Servidor & Segurança JWT
+PORT=8080
+JWT_SECRET=sua_chave_jwt_super_segura_aqui
+
 # Inteligência Artificial (Spring AI / OpenAI)
 API_KEY=sua_chave_api_openai_aqui
+
+# E-mail (SMTP)
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=seu_email@exemplo.com
+MAIL_PASSWORD=sua_senha_ou_app_password
 ```
 ---
 
@@ -190,6 +197,11 @@ Os testes de integração utilizam uma configuração isolada em memória com ba
 1. **Subir os serviços de infraestrutura (RabbitMQ e Oracle):**
    ```bash
    docker-compose up -d
+   ```
+
+2 **Rodar build Docker:**
+   ```bash
+   docker build -t stormaid-api .
    ```
 ---
 
