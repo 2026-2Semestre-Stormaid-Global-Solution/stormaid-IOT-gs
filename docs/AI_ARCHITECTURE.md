@@ -1,15 +1,16 @@
-# Arquitetura de Inteligência Artificial e RAG - StormAid
+# Arquitetura de Inteligência Artificial e RAG - StormAID
 
 ## Visão Geral
-A funcionalidade de IA do StormAid atua como um assistente de contextualização de ocorrências para apoiar a central de atendimento (Regulador). O fluxo baseia-se em **RAG (Retrieval-Augmented Generation)** utilizando o **Spring AI**.
+A funcionalidade de IA do StormAID atua como um assistente de contextualização de ocorrências para apoiar a central de atendimento (Regulador). O fluxo baseia-se em **RAG (Retrieval-Augmented Generation)** utilizando o **Spring AI**.
 
 ## Componentes Principais
 1. **Base de Conhecimento (`src/main/resources/knowledge/`):**
-    - Contém documentos curados em Markdown (como diretrizes de enchentes e deslizamentos) e o ficheiro `manifest.json` com metadados e proveniência oficial.
-2. **Pipeline de Recuperação e Geração:**
-    - O Spring AI processa os documentos, armazena-os num repositório vetorial (`VectorStore`) e efetua buscas de similaridade baseadas no relato do cidadão.
-    - O modelo de linguagem (`ChatModel`) gera um resumo estruturado e fidedigno estritamente suportado pelos chunks recuperados.
-3. **Persistência e Mensageria (RabbitMQ):**
-    - O incidente é persistido previamente na base de dados Oracle (`TB_STORMAID_INCIDENT_REPORT`).
-    - O evento de criação (`incident.created.v1`) despoleta o processamento assíncrono da IA.
-    - Após a conclusão, a análise é guardada em `TB_STORMAID_INCIDENT_AI_ANALYSIS` e é publicado o evento `incident.ai.completed.v1` para o ecossistema .NET.
+   - Contém documentos curados em Markdown (`guia-emergencias.md`) e o ficheiro `manifest.json` com metadados e proveniência oficial.
+   - O `VectorStoreLoader` divide o conteúdo em *chunks* e anexa metadados (`documentId`, `title`, `sourceUrl` e `section`) antes de indexar no `VectorStore`.
+2. **Pipeline de Recuperação e Geração (`RagAnalysisService`):**
+   - Extrai apenas o conteúdo textual do relato (`textDescription` ou `audioTranscription`) e a `emergencyCategory`, sem enviar dados pessoais desnecessários do solicitante ao modelo.
+   - Consulta o `VectorStore` por similaridade e, se não houver documentos relevantes ou texto, grava o estado `NO_SOURCES`.
+   - Envia o contexto recuperado ao `ChatClient` com instrução para retornar JSON estrito (`summary`, `extractedInformation`, `sources`).
+3. **Persistência, Observabilidade e Mensageria (RabbitMQ):**
+   - O incidente é persistido previamente na base de dados e o evento de criação despoleta o processamento assíncrono via `IncidentAiConsumer`.
+   - Cada execução regista entrada/contexto/saída na entidade `IncidentAiAnalysis` (`status`, `summary`, `extractedInformationJson`, `sourceReferencesJson`, `errorCode`, `completedAt`) e publica `incident.ai.completed.v1` quando concluída.
