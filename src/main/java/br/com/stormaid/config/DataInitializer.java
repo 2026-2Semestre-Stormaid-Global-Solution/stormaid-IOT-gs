@@ -60,6 +60,17 @@ public class DataInitializer {
                 citizen.setRoles(Set.of(citizenRole));
                 userRepository.save(citizen);
             }
+
+            if (userRepository.findByEmail("admin@stormaid.example").isEmpty()) {
+                User admin = new User();
+                admin.setFullName("Administrador Stormaid");
+                admin.setEmail("admin@stormaid.example");
+                admin.setPhoneNumber("+5511988888888");
+                admin.setPassword(passwordEncoder.encode("SenhaForte!2026"));
+                admin.setStatus(UserStatus.ACTIVE);
+                admin.setRoles(Set.of(adminRole));
+                userRepository.save(admin);
+            }
         };
     }
 }

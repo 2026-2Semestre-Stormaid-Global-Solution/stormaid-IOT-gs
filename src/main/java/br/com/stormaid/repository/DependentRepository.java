@@ -10,4 +10,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface DependentRepository extends JpaRepository<Dependent, Long> {
     Page<Dependent> findByGuardian(User guardian, Pageable pageable);
+    Page<Dependent> findByGuardianAndActiveTrue(User guardian, Pageable pageable);
 }
