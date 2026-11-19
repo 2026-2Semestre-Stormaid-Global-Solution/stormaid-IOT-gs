@@ -50,7 +50,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/register",
                                 "/api/v1/addresses/**",
-                                "/api/v1/password-recovery/**"
+                                "/api/v1/password-recovery/**",
+                                "/api/v1/auth/register-complete"
                         ).permitAll()
                         .requestMatchers("/api/v1/citizens/**").hasRole("CITIZEN")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

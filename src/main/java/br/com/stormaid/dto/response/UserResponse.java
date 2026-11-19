@@ -4,6 +4,7 @@ import br.com.stormaid.entity.User;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -15,6 +16,7 @@ public class UserResponse {
     private String fullName;
     private String email;
     private String phoneNumber;
+    private LocalDate birthDate;
     private Set<String> roles;
     private String status;
     private LocalDateTime createdAt;
@@ -26,6 +28,7 @@ public class UserResponse {
         response.setFullName(user.getFullName());
         response.setEmail(user.getEmail());
         response.setPhoneNumber(user.getPhoneNumber());
+        response.setBirthDate(user.getBirthDate());
 
         if (user.getRoles() != null) {
             response.setRoles(user.getRoles().stream()

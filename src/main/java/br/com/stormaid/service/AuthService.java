@@ -15,6 +15,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
@@ -45,7 +47,12 @@ public class AuthService {
         String normalizedEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase(Locale.ROOT) : "";
 
         if (userRepository.existsByEmail(normalizedEmail)) {
-            throw new RuntimeException("Email already exists");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
+        }
+
+        String normalizedCpf = request.getCpf().replaceAll("\\D", "");
+        if (userRepository.existsByCpf(normalizedCpf)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "CPF already exists");
         }
 
         Role citizenRole = roleRepository.findByName(UserRole.CITIZEN)
@@ -55,6 +62,8 @@ public class AuthService {
         user.setFullName(request.getFullName());
         user.setEmail(normalizedEmail);
         user.setPhoneNumber(request.getPhoneNumber());
+        user.setCpf(normalizedCpf);
+        user.setBirthDate(request.getBirthDate());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setStatus(UserStatus.ACTIVE);
         user.setRoles(Collections.singleton(citizenRole));
