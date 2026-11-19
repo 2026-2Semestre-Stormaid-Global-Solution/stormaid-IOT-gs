@@ -1,6 +1,8 @@
 package br.com.stormaid.client;
 
+import br.com.stormaid.exception.ExternalWeatherServiceException;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -16,12 +18,16 @@ public class WeatherApiClient {
                 .queryParam("latitude", latitude)
                 .queryParam("longitude", longitude)
                 .queryParam("current", "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m")
+                .queryParam("hourly", "precipitation_probability")
+                .queryParam("timezone", "auto")
                 .toUriString();
 
         try {
-            return restTemplate.getForObject(url, Map.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Erro ao comunicar com o serviço meteorológico externo: " + e.getMessage());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = restTemplate.getForObject(url, Map.class);
+            return body;
+        } catch (RestClientException e) {
+            throw new ExternalWeatherServiceException("Erro ao comunicar com o serviço meteorológico externo.", e);
         }
     }
 }
