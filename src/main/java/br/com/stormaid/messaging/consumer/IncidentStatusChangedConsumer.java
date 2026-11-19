@@ -83,9 +83,7 @@ public class IncidentStatusChangedConsumer {
             return;
         }
 
-        IncidentPublicStatus newStatus = IncidentPublicStatus.valueOf(
-                event.getStatus()
-        );
+        IncidentPublicStatus newStatus = resolvePublicStatus(event.getStatus());
 
         incident.setPublicStatus(newStatus);
         incident.setStatusVersion(event.getVersion());
@@ -131,5 +129,14 @@ public class IncidentStatusChangedConsumer {
         public void setVersion(Long version) {
             this.version = version;
         }
+    }
+
+    private IncidentPublicStatus resolvePublicStatus(String rawStatus) {
+        String normalized = rawStatus.trim().toUpperCase();
+        if ("IN_PROGRESS".equals(normalized)) {
+            log.info("Mapeando status externo 'IN_PROGRESS' para DISPATCHED.");
+            return IncidentPublicStatus.DISPATCHED;
+        }
+        return IncidentPublicStatus.valueOf(normalized);
     }
 }

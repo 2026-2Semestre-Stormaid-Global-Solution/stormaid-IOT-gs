@@ -331,12 +331,17 @@ public class IncidentReportService {
     ) {
         IncidentReport incident = incidentReportRepository
                 .findById(id)
-                .filter(inc -> inc.getRequester()
-                        .getId()
-                        .equals(requester.getId()))
-                .orElseThrow(() -> new RuntimeException(
-                        "Ocorrência não encontrada ou não autorizada"
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Ocorrência não encontrada"
                 ));
+
+        if (incident.getRequester() == null
+                || !Objects.equals(incident.getRequester().getId(), requester.getId())) {
+            throw new AccessDeniedException(
+                    "Você não tem permissão para consultar esta ocorrência"
+            );
+        }
 
         return mapToResponse(incident);
     }

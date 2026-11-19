@@ -69,7 +69,7 @@ public class SecurityConfig {
                     ).permitAll();
                     auth.requestMatchers("/api/v1/citizens/**").hasRole("CITIZEN");
                     auth.requestMatchers("/api/v1/admin/**").hasRole("ADMIN");
-                    auth.requestMatchers("/api/v1/internal/**").hasAnyRole("REGULATOR", "SYSTEM");
+                    auth.requestMatchers("/api/v1/internal/**").hasAnyRole("ADMIN", "REGULATOR", "SYSTEM");
                     auth.anyRequest().authenticated();
                 });
 
