@@ -6,6 +6,7 @@ import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
@@ -32,6 +33,13 @@ public class User implements UserDetails {
 
     @Column(name = "EMAIL", nullable = false, unique = true, length = 150)
     private String email;
+
+    @JsonIgnore
+    @Column(name = "CPF", length = 11, unique = true)
+    private String cpf;
+
+    @Column(name = "BIRTH_DATE")
+    private LocalDate birthDate;
 
     @JsonIgnore
     @Column(name = "PASSWORD_HASH", nullable = false, length = 255)
