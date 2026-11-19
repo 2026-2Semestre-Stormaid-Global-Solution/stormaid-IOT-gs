@@ -64,7 +64,7 @@ LINK YOUTUBE
 
 ## ⚙️ Tecnologias e Configurações
 ### Tecnologias Utilizadas
-- **Java 17 / 21** & **Spring Boot 3.2.x**
+- **Java 17 / 21** & **Spring Boot 3.2.5**
 - **Spring AI (Integração com LLM e RAG para análise de incidentes)**
 - **Spring Security** com **JWT (JSON Web Token)**
 - **Oracle Database** (Ambiente Principal) & **H2 Database** (Ambiente de Testes)
@@ -117,8 +117,16 @@ O sistema utiliza quatro perfis (roles) de autorização distintos:
 
 ### 1. Migrações de Banco de Dados (Flyway)
 As migrações SQL são executadas automaticamente na inicialização da aplicação em ambiente de produção/desenvolvimento Oracle:
-- `V1__create_stormaid_schema.sql`: Criação das tabelas base (`TB_STORMAID_USER`, `TB_STORMAID_USER_ROLE`, etc.).
-- `V2__seed_initial_data.sql`: Carga inicial de permissões e perfis padronizados.
+- `V1__create_stormaid_schema.sql`: Criação das tabelas base do esquema do StormAid.
+- `V2__seed_roles.sql`: Carga inicial dos perfis (roles) do sistema.
+- `V3__create_responder_profile.sql`: Criação da estrutura de perfil de socorrista (RESPONDER).
+- `V4__alter_role_constraint.sql`: Atualização de restrições (constraints) de perfis.
+- `V5__create_password_reset_table.sql`: Criação da tabela de códigos de recuperação de senha.
+- `V6__add_attempts_to_password_reset.sql`: Adição do controle de tentativas na tabela de recuperação de senha.
+- `V7__add_cpf_and_birth_date_to_user.sql`: Adição dos campos de CPF e data de nascimento na tabela de usuários.
+- `V8__add_accessibility_fields_to_citizen_profile.sql`: Adição de campos de acessibilidade no perfil do cidadão.
+- `V9__add_accessibility_fields_to_dependent.sql`: Adição de campos de acessibilidade nos dependentes.
+- `V10__add_token_version_to_user.sql`: Adição da coluna de versionamento de token (TOKEN_VERSION) no usuário.
 
 ### 2. Variáveis de Ambiente
 Configure as seguintes variáveis no seu ambiente ou no `application.properties`:
@@ -154,28 +162,43 @@ MAIL_PASSWORD=sua_senha_ou_app_password
 ## 📬 Mensageria Assíncrona (RabbitMQ)
 
 A API do StormAid publica eventos assíncronos críticos:
+- Exchange: stormaid.incidents
 - Fila de Incidentes: incident.created.v1
 - Fila de IA (RAG): incident.ai.queue
-- Exchange: stormaid.incidents
+- Atualização de Status (via .NET): consumo idempotente com controlo de versão de evento (IncidentStatusChangedConsumer).
 ---
 
 ## 🧪 Execução de Testes Automatizados
 
-Os testes de integração utilizam uma configuração isolada em memória com banco H2 (src/test/resources/application.properties).
+Os testes unitários utilizam JUnit 5 + Mockito, e os testes de integração utilizam MockMvc com banco isolado H2 em memória (src/test/resources/application.properties).
 
-### Como executar os testes via Maven:
+### Suíte de Testes Coberta
 
-**Windows (PowerShell):**
+- AuthControllerTest: Autenticação, registo e bloqueio de acesso sem token JWT (403 Forbidden).
+- CitizenRegistrationServiceTest: Validação de regras de cadastro completo do cidadão.
+- CitizenProfileServiceTest: Consulta de perfil padrão, atualização de endereço, vulnerabilidade (MobilityStatus) e contacto de emergência.
+- DependentServiceTest: Criação de dependente com herança de endereço do responsável, validação de parentesco (RelationshipType), isolamento entre responsáveis (403) e remoção lógica (soft delete).
+- PasswordRecoveryServiceTest: Envio de código com rate limit, invalidação de códigos anteriores, verificação de código com geração de tempToken, bloqueio por tentativas falhas e redefinição de senha com incremento de tokenVersion.
+- IncidentReportServiceTest, IncidentReportControllerTest & IncidentReportControllerRecoveryTest: Regras de negócio de ocorrências, validações e recuperação.
+- IncidentEventPublisherTest & IncidentStatusChangedConsumerTest: Publicação pós-commit no RabbitMQ, idempotência e rejeição de payloads inválidos.
+- AddressServiceTest & AppVersionServiceTest: Consulta de CEP e metadados de versão/build.
+
+### Comandos Maven:
+
+**Executar todos os testes (Windows PowerShell):**
 ```powershell
 .\mvnw clean test
 ```
 
-**Linux / macOS:**
+**Executar todos os testes (Linux / macOS):**
 ```bash
 ./mvnw clean test
 ```
 
-> **Status da Suíte de Testes**: `BUILD SUCCESS` (Testes de inicialização de contexto Spring Boot e bloqueio de acesso sem token JWT validados com status HTTP `403 Forbidden`).
+**Gerar pacote executável (.jar):**
+```bash
+.\mvnw -DskipTests clean package
+```
 
 ---
 
@@ -223,10 +246,44 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
-| `POST` | `/api/v1/auth/register` | Registo de novos utilizadores com role `CITIZEN` | Público |
+| `POST` | `/api/v1/auth/register` | Registo básico de novos utilizadores com role `CITIZEN` | Público |
+| `POST` | `/api/v1/auth/register-complete` | Cadastro completo do cidadão (dados pessoais, endereço, vulnerabilidade e contacto de emergência)| Público |
 | `POST` | `/api/v1/auth/login` | Realiza o login na aplicação e retorna o token JWT | Público|
 | `GET` | `/api/v1/auth/me` | Retorna os dados do utilizador autenticado| Autenticado|
 
+
+#### Exemplo de Payload JSON — POST /api/v1/auth/register-complete
+```JSON
+{
+"fullName": "Maria Silva",
+"email": "maria.silva@stormaid.example",
+"cpf": "12345678901",
+"birthDate": "1990-05-15",
+"password": "SenhaForte!2026",
+"phoneNumber": "11999999999",
+"address": {
+"postalCode": "01310-100",
+"street": "Avenida Paulista",
+"number": "1000",
+"complement": "Apto 42",
+"neighborhood": "Bela Vista",
+"city": "São Paulo",
+"state": "SP"
+},
+"vulnerability": {
+"mobilityStatus": "ASSISTED",
+"hasVisualImpairment": false,
+"hasHearingImpairment": false,
+"equipmentDescription": "Bengala de apoio",
+"accessibilityNotes": "Necessita de apoio na evacuação"
+},
+"emergencyContact": {
+"name": "Ana Paula",
+"phoneNumber": "11988887777",
+"relationship": "Irmã"
+}
+}
+```
 ---
 
 ### 👤 2. Utilizadores (`/api/v1/users`)
@@ -234,7 +291,7 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
 | `GET` | `/api/v1/users/me` | Consulta os dados do utilizador autenticado | Autenticado |
-| `PUT` | `/api/v1/users/me` | Atualiza os dados do utilizador autenticado | Autenticado |
+| `PUT` | `/api/v1/users/me` | Atualiza os dados cadastrais básicos do utilizador autenticado | Autenticado |
 | `DELETE` | `/api/v1/users/me` | Remove ou desativa o utilizador autenticado | Autenticado |
 | `GET` | `/api/v1/internal/users` | Consulta interna de utilizadores | Interno / Conforme configuração|
 
@@ -245,7 +302,7 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
 | `GET` | `/api/v1/citizens/me/profile` | Retorna os dados do perfil do cidadão autenticado | `CITIZEN` |
-| `PUT` | `/api/v1/citizens/me/profile` | Atualiza o perfil do cidadão autenticado | `CITIZEN`|
+| `PUT` | `/api/v1/citizens/me/profile` | Atualiza endereço, condições de vulnerabilidade (AUTONOMOUS, ASSISTED, WHEELCHAIR_USER, BEDRIDDEN, UNKNOWN) e contacto de emergência | `CITIZEN`|
 
 ---
 
@@ -291,7 +348,15 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 
 ---
 
-### 🔑 8. Recuperação de Senha (`/api/v1/password-recovery`)
+### 🌦️8. Meteorologia (`/api/v1/weather`)
+
+| Método | Endpoint | Descrição | Acesso    |
+|--------|----------|-----------|-----------|
+| `GET` | `/api/v1/weather` | Consulta condições meteorológicas atuais e previsão por coordenadas/localidade | Autenticado / Público |
+
+---
+
+### 🔑 9. Recuperação de Senha (`/api/v1/password-recovery`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
@@ -301,7 +366,7 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 
 ---
 
-### 🚑 9. Socorristas e Credenciamento Interno (`/api/v1/responders` e `/api/v1/internal`)
+### 🚑 10. Socorristas e Credenciamento Interno (`/api/v1/responders` e `/api/v1/internal`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
@@ -312,7 +377,7 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 
 ---
 
-### 🔗 10. Integração Interna — Incidentes (`.NET`)
+### 🔗 11. Integração Interna — Incidentes (`.NET`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
@@ -320,11 +385,19 @@ Para facilitar a avaliação, a aplicação inicializa automaticamente contas de
 
 ---
 
-### ⚙️ 11. Administração do Sistema (`/api/v1/admin`)
+### ℹ️ 12. Versão e Build da Aplicação (`/api/v1/version / Actuator`)
+| Método | Endpoint | Descrição | Acesso |
+|--------|----------|----------|--------|
+| `GET`  | `/api/v1/version` | Retorna informações de versão da aplicação, ambiente e hash do commit Git| `Público / Conforme configuração` |
+
+---
+
+### ⚙️ 13. Administração do Sistema (`/api/v1/admin`)
 
 | Método | Endpoint | Descrição | Acesso |
 |--------|----------|-----------|--------|
 | `POST` | `/api/v1/admin/regulators` | Cadastra ou promove reguladores no sistema| `ADMIN` |
+
 ---
 
 ## 📸 Evidências e Testes da Aplicação 
@@ -350,8 +423,8 @@ Após a validação correta dos parâmetros e do envio com o token de autentica�
 </p>
 
 ### 4. Suíte de Testes Automatizados
-* **Ferramenta**: JUnit 5 / MockMvc (Testes de integração com H2 em memória).
-* **Status da Execução**: `BUILD SUCCESS` (Garante que a inicialização do contexto Spring Boot, as migrações e o bloqueio de acessos não autorizados por JWT funcionam perfeitamente).
+* **Ferramenta**: JUnit 5, Mockito e MockMvc (Testes unitários e de integração com H2 em memória).
+* **Status da Execução**: `BUILD SUCCESS` (Garante que a inicialização do contexto Spring Boot, regras de perfil/dependentes/recuperação de senha, mensageria e o bloqueio de acessos não autorizados por JWT funcionam perfeitamente).
 <p align="center">
   <img src="docs/images/build-success.png" width="300" alt="BUILD SUCCESS">
 </p>
