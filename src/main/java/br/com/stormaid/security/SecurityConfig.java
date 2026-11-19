@@ -67,6 +67,7 @@ public class SecurityConfig {
                             "/api/v1/password-recovery/**",
                             "/api/v1/auth/register-complete"
                     ).permitAll();
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/app/info").permitAll();
                     auth.requestMatchers("/api/v1/citizens/**").hasRole("CITIZEN");
                     auth.requestMatchers("/api/v1/admin/**").hasRole("ADMIN");
                     auth.requestMatchers("/api/v1/internal/**").hasAnyRole("ADMIN", "REGULATOR", "SYSTEM");
