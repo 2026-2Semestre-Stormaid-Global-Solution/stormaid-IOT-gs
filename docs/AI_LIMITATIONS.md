@@ -7,3 +7,4 @@ Para garantir a segurança e a fiabilidade do sistema de emergência, o módulo 
 - **Substituição Humana Proibida:** A decisão final e o despacho pertencem inteiramente ao operador/regulador humano.
 - **Privacidade e Dados Ausentes:** Não são enviados dados pessoais desnecessários ao modelo, e informações não declaradas no relato não são inventadas.
 - **Abstenção (`NO_SOURCES`) e Falhas (`FAILED`):** Sem suporte documental, o sistema retorna `NO_SOURCES`; em erro do modelo ou JSON inválido, grava `FAILED` (`AI_PROCESSING_ERROR`) e aciona o fluxo de *retry*/DLQ sem bloquear o registro da ocorrência.
+- **Transcrição de Áudio Simulada:** O `SpeechTranscriptionService` produz uma transcrição simulada para fins de fluxo/teste e não realiza reconhecimento real de voz; o conteúdo simulado não deve ser tratado como transcrição real de áudio.
