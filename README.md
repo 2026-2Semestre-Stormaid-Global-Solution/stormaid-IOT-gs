@@ -8,7 +8,16 @@ O **StormAid** é uma plataforma inteligente de gestão de emergências, zelador
 
 Acesse a documentação interativa e realize testes diretamente pelo navegador:
 
-- Produção / Deploy: `https://stormaid-java-gs.onrender.com/swagger-ui/index.html`
+### Produção / Deploy
+```bash
+https://stormaid-java-gs.onrender.com/swagger-ui/index.html
+```
+---
+
+🔗 Link YouTube (Pitch)
+```bash
+https://www.youtube.com/watch?v=ae4XAPM-IjA
+```
 ---
 
 ## 👥 Integrantes do Grupo
@@ -47,9 +56,14 @@ Acesse a documentação interativa e realize testes diretamente pelo navegador:
 
 ---
 
-## 🎯 Objetivo da IA e Responsabilidades no Ecossistema
+## 🎯 Objetivo da IA, Justificativas Técnicas e Responsabilidades
 
 A funcionalidade de IA atua como **Assistente de Contextualização de Ocorrências**: transforma relatos de emergência em resumos objetivos e estruturados para apoiar a leitura do `REGULATOR`, recuperando trechos de uma base documental confiável via **Retrieval-Augmented Generation (RAG)**.
+
+### Justificativas Técnicas das Escolhas Arquiteturais
+- **IA como módulo no backend Java / Spring Boot (em vez de um terceiro backend separado)**: reutiliza o modelo de domínio já consolidado (`IncidentReport` e `IncidentAiAnalysis`), o controle transacional com Oracle/Flyway e as políticas de segurança/autorização existentes, evitando duplicação de entidades e reduzindo complexidade operacional.
+- **Processamento assíncrono via RabbitMQ (`stormaid.events`)**: desacopla a criação da ocorrência (`201 Created`) da execução do RAG/STT, garantindo que o chamado seja persistido primeiro e que o atendimento pela central não seja bloqueado por latência, limite de quota ou indisponibilidade externa.
+- **RAG restrito a fatos relatados e corpus documental curado**: fundamenta observações gerais em documentos oficiais de defesa civil/desastres e separa estritamente os fatos narrados pelo cidadão do contexto documental, reduzindo invenções e impedindo que o LLM tome decisões operacionais ou clínicas.
 
 ### O que a IA faz vs. O que a IA NÃO faz
 
@@ -64,6 +78,23 @@ A funcionalidade de IA atua como **Assistente de Contextualização de Ocorrênc
 - **RabbitMQ (`stormaid.events`)**: entrega eventos de ocorrência e disponibilização de análise a filas distintas com controle de idempotência (`eventId`), sem substituir o banco de dados nem transportar dados sensíveis desnecessários.
 - **.NET / Regulator**: recebe projeção do chamado, consulta análise no Java por canal seguro e conduz a decisão de regulação/despacho (não recalcula RAG, não armazena senha nem assume propriedade de `IncidentAiAnalysis`).
 - **Mobile Responder**: exibe despachos da `.NET` e dados essenciais autorizados, incluindo resumo quando necessário, sem consultas globais à base de relatos nem acesso a dados de outros atendimentos.
+
+---
+
+## 📊 Diagrama da Arquitetura (IoT / Canais → Java + RAG → RabbitMQ → .NET)
+
+```mermaid
+flowchart LR
+    MC["Mobile Citizen<br/>(React Native: Texto, Voz, SOS)"] -->|"HTTP POST"| JAVA["API Java / Spring Boot<br/>(IncidentReport + Spring AI + RAG)"]
+    JAVA -->|"Persiste análise & histórico (1:N)"| DB[("Oracle Database<br/>(Flyway)")]
+    KB["Base de Conhecimento RAG<br/>(Documentos Curados + Metadados)"] -.->|"Recuperação (topK)"| JAVA
+    JAVA -->|"incident.created.v1<br/>incident.ai.completed.v1"| MQ{"RabbitMQ<br/>stormaid.events"}
+    MQ -->|"stormaid.java.ai-processor"| JAVA
+    MQ -->|"stormaid.dotnet.incident-created<br/>stormaid.dotnet.ai-completed"| DOTNET[".NET / Regulator<br/>(Regulação & Despacho)"]
+    DOTNET -->|"GET /api/v1/internal/incidents/{id}/ai-analysis"| JAVA
+    DOTNET -->|"incident.status.changed.v1"| MQ
+    DOTNET -->|"Despachos & dados autorizados"| MR["Mobile Responder"]
+```
 
 ---
 
@@ -101,13 +132,17 @@ A funcionalidade de IA atua como **Assistente de Contextualização de Ocorrênc
 
 ---
 
-## ⚙️ Requisitos, Variáveis de Ambiente e Execução
+## ⚙️ Modelos, Tecnologias, Variáveis de Ambiente e Execução
+
+### Modelos e Tecnologias
+- **Backend & IA**: Java 17/21, Spring Boot, Spring AI (`ChatModel` / `ChatClient`, `EmbeddingModel`, `VectorStore` e, quando aplicável, transcrição STT), RAG sobre base documental curada.
+- **Persistência, Mensageria e Canais**: Oracle Database com Flyway, RabbitMQ, integração com serviço `.NET` e canais do Mobile Citizen (React Native).
 
 ### Pré-requisitos
 
 - **Java 17 / 21** e **Maven Wrapper (`./mvnw` / `.\mvnw.cmd`)**
 - **Oracle Database** (com **Flyway**) e **RabbitMQ**
-- Provedor compatível com **Spring AI** (`ChatModel` / `ChatClient`, `EmbeddingModel`, `VectorStore` e, quando aplicável, modelo/serviço de transcrição STT)
+- Provedor compatível com **Spring AI** configurado via variáveis de ambiente (sem comitar chaves reais ou segredos)
 
 ### Variáveis de Ambiente (Exemplo — nunca comitar chaves reais)
 
@@ -171,30 +206,22 @@ MAIL_PASSWORD=sua_senha_ou_app_password
 
 ---
 
-## 🛡️ Segurança, Resiliência, Falhas e Limitações
+## 📊 Evidências de Avaliação: Casos de Teste, Métricas, Resultados e Limitações
 
-- **Resiliência e Falhas Externas (sem bloquear o chamado)**:
-  - **Falha/Quota da IA (`HTTP 429` / timeout / JSON inválido)**: persiste `FAILED` (ou `NO_SOURCES` quando não há trechos relevantes), aplica *fallback* controlado e **não** bloqueia o registo da ocorrência nem o atendimento pela central humana.
-  - **Falha de conexão com RabbitMQ ou STT**: preserva o chamado registrado; `transcriptionStatus=FAILED` mantém o registro visível com categoria e localização originais.
-- **Segurança e Privacidade**:
-  - Endpoint interno protegido por autenticação/autorização de serviço e escopo mínimo (bloqueando acesso indevido de terceiros).
-  - Relatos e documentos recuperados são tratados como dados não confiáveis (defesa contra *prompt injection*; saída do LLM nunca altera `publicStatus`, `RegulationDecision` ou despachos).
-  - Nunca gravar chaves reais, tokens, áudios privados ou dados sensíveis em logs ou arquivos versionados no GitHub.
-- **Limitações Conhecidas**:
-  - RAG não elimina totalmente alucinações nem substitui validação humana; alertas meteorológicos dinâmicos em tempo real (como avisos do INMET) não são gerados por base documental estática.
-  - Se o canal de voz (`VOICE_AUDIO`) ainda não contar com STT real ativo no ambiente de demonstração, essa limitação deve ser declarada explicitamente sem simular transcrição real.
-
----
-
-## 🧪 Testes e Métricas de Avaliação
-
-- **Execução de testes**:
-
+- **Execução de testes automatizados**:
   ```bash
   ./mvnw clean test
   ```
+- **Casos de teste e critérios avaliados**: cenários funcionais e negativos (ex.: `tests/ai/test-cases.csv`), cobrindo fidelidade factual aos fatos relatados, cobertura de informações essenciais, explicitação de dados ausentes (`peopleAtRisk=null` / `missingInformation`), validade das referências recuperadas (`documentId` / `chunkId`), abstenção adequada (`NO_SOURCES`), resistência a *prompt injection*, isolamento de acesso (`403` / autorização de serviço), idempotência de eventos e comportamento em falhas (`FAILED` / `transcriptionStatus=FAILED` / `SOS_SILENT`).
+- **Métricas e resultados reais**: acompanhar fidelidade factual, cobertura de fatos relatados, validade das referências, taxa de abstenção adequada (`NO_SOURCES`) e tempo de análise (`completedAt - createdAt`). Registre os resultados reais medidos em `docs/AI_EVALUATION.md` (sem preencher métricas antecipadamente).
+- **Limitações e resiliência**:
+  - **Falha/Quota da IA (`HTTP 429` / timeout / JSON inválido)**: persiste `FAILED` (ou `NO_SOURCES` quando não há trechos relevantes), aplica *fallback* controlado e **não** bloqueia o registo da ocorrência nem o atendimento pela central humana.
+  - **Falha de conexão com RabbitMQ ou STT**: preserva o chamado registrado; `transcriptionStatus=FAILED` mantém o registro visível com categoria e localização originais.
+  - **RAG e dados não confiáveis**: RAG não elimina totalmente alucinações nem substitui validação humana; alertas meteorológicos dinâmicos em tempo real (como avisos do INMET) não são gerados por base documental estática; conteúdos recuperados e relatos não são comandos confiáveis e a saída do LLM nunca altera `publicStatus`, `RegulationDecision` ou despachos.
+  - **Canal de voz (`VOICE_AUDIO`)**: se o STT real ainda não estiver ativo no ambiente de demonstração, declare essa limitação explicitamente sem simular transcrição real.
+  - **Privacidade**: nunca gravar chaves reais, tokens, áudios privados ou dados sensíveis em logs ou arquivos versionados no GitHub.
 
-- **Casos de teste e métricas**: planejados com entradas sintéticas e gabaritos (ex.: `tests/ai/test-cases.csv`), medindo fidelidade factual, cobertura de fatos relatados, validade das referências recuperadas, abstenção adequada (`NO_SOURCES`) e tempo de análise (`completedAt - createdAt`). Registre os resultados reais medidos em `docs/AI_EVALUATION.md` (sem preencher métricas antecipadamente).
+> **Formato de envio na plataforma**: enviar **APENAS** um arquivo `.txt` contendo RM, nome completo dos integrantes e o link do repositório no GitHub, mantendo no repositório o código-fonte, dependências, configurações de exemplo sem credenciais, este `README.md`, fontes, diagrama, casos de teste, resultados reais, métricas e limitações.
 
 ---
 
